@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { RepairGuide, SparePart, Vehicle } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,18 +74,9 @@ export default function MaintenanceGuides() {
       return;
     }
 
-    try {
-      // Crear reservas programadas para los materiales (Note: reservation data is constructed but not used to call an API here)
-      const reservationData = {
-        guide_id: selectedGuide.id,
-        vehicle_id: selectedVehicle.id,
-        materials: selectedGuide.required_parts,
-        scheduled_date: new Date(),
-        status: 'programmed'
-      };
-
-      // Navegar a Mantenimiento con el contexto de preparación verificada
-      const navigationUrl = createPageUrl('Maintenance') + `?preparation_verified=true&guide_id=${selectedGuide.id}&vehicle_id=${selectedVehicle.id}`;
+      try {
+        // Navegar a Mantenimiento con el contexto de preparación verificada
+        const navigationUrl = createPageUrl('Maintenance') + `?preparation_verified=true&guide_id=${selectedGuide.id}&vehicle_id=${selectedVehicle.id}`;
       window.location.href = navigationUrl;
 
       toast.success("Preparación completada. Redirigiendo a Mantenimiento...");

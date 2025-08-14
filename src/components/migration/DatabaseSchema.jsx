@@ -250,7 +250,7 @@ INSERT INTO vehicles (plate, brand, model, year, vehicle_type, status, current_m
           </div>
           <div className="mt-4 p-3 bg-blue-100 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Nota:</strong> Este schema es 100% compatible con tus datos actuales de base44. 
+              <strong>Nota:</strong> Este schema es 100% compatible con tus datos actuales.
               Los tipos de datos y estructura mantienen la misma interfaz.
             </p>
           </div>
