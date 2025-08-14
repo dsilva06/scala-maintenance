@@ -209,7 +209,7 @@ CLOUDINARY_API_SECRET="your-api-secret"`
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h4 className="font-medium text-gray-900">ANTES (base44)</h4>
+                    <h4 className="font-medium text-gray-900">ANTES (sistema original)</h4>
                     <div className="bg-gray-900 text-gray-100 p-4 rounded-lg">
                       <pre className="text-sm">{`import { Vehicle } from '@/api/entities';
 
@@ -260,7 +260,7 @@ export default function VehiclesPage() {
                   <h4 className="font-medium">Pasos de Migración:</h4>
                   <div className="space-y-2">
                     {[
-                      'Copiar componente de base44 a src/components/',
+                      'Copiar componente existente a src/components/',
                       'Cambiar import de entidad por API client',
                       'Verificar que funcione correctamente',
                       'Repetir para siguiente componente'
