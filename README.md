@@ -15,4 +15,9 @@ npm run dev
 npm run build
 ```
 
+## Testing
+
+No test runner is configured. Add your preferred framework and define an npm
+`test` script before running automated tests.
+
 For more information and support, please contact the project maintainers.
