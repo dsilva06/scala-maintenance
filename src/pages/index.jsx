@@ -16,7 +16,6 @@ import Trips from "./Trips";
 
 import AIAssistant from "./AIAssistant";
 
-import MigrationGuide from "./MigrationGuide";
 
 import Guides from "./Guides";
 
@@ -43,8 +42,6 @@ const PAGES = {
     Trips: Trips,
     
     AIAssistant: AIAssistant,
-    
-    MigrationGuide: MigrationGuide,
     
     Guides: Guides,
     
@@ -94,8 +91,6 @@ function PagesContent() {
                 <Route path="/Trips" element={<Trips />} />
                 
                 <Route path="/AIAssistant" element={<AIAssistant />} />
-                
-                <Route path="/MigrationGuide" element={<MigrationGuide />} />
                 
                 <Route path="/Guides" element={<Guides />} />
                 

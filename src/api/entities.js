@@ -1,27 +1,27 @@
-import { base44 } from './base44Client';
+import { apiClient } from './apiClient';
 
 
-export const Vehicle = base44.entities.Vehicle;
+export const Vehicle = apiClient.entities.Vehicle;
 
-export const MaintenanceOrder = base44.entities.MaintenanceOrder;
+export const MaintenanceOrder = apiClient.entities.MaintenanceOrder;
 
-export const Inspection = base44.entities.Inspection;
+export const Inspection = apiClient.entities.Inspection;
 
-export const SparePart = base44.entities.SparePart;
+export const SparePart = apiClient.entities.SparePart;
 
-export const Document = base44.entities.Document;
+export const Document = apiClient.entities.Document;
 
-export const RepairGuide = base44.entities.RepairGuide;
+export const RepairGuide = apiClient.entities.RepairGuide;
 
-export const Trip = base44.entities.Trip;
+export const Trip = apiClient.entities.Trip;
 
-export const Alert = base44.entities.Alert;
+export const Alert = apiClient.entities.Alert;
 
-export const ChatMessage = base44.entities.ChatMessage;
+export const ChatMessage = apiClient.entities.ChatMessage;
 
-export const Driver = base44.entities.Driver;
+export const Driver = apiClient.entities.Driver;
 
 
 
 // auth sdk:
-export const User = base44.auth;
+export const User = apiClient.auth;

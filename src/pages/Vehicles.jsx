@@ -1,14 +1,12 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Vehicle } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Plus,
+  Search,
   Car
 } from "lucide-react";
 

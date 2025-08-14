@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Inspection, Vehicle, MaintenanceOrder } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardCheck, Car, Search, Filter, Edit, Trash2, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { Plus, ClipboardCheck, Search, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import InspectionCard from "../components/inspections/InspectionCard";
 import InspectionForm from "../components/inspections/InspectionForm";
 
