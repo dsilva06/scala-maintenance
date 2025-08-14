@@ -14,7 +14,6 @@ import {
   Search,
   Map,
   Bot,
-  Zap,
   BookOpen,
   ShoppingCart
 } from "lucide-react";
@@ -75,7 +74,6 @@ const navigationItems = [
 
 const bottomNavItems = [
     { title: "Asistente AI", url: createPageUrl("AIAssistant"), icon: Bot },
-    { title: "Guía de Migración", url: createPageUrl("MigrationGuide"), icon: Zap },
 ];
 
 export default function Layout({ children }) {
