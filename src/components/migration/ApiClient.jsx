@@ -49,7 +49,7 @@ class ApiClient {
   }
 }`,
 
-    entities: `// Entity Classes - Mantienen la misma interfaz que base44
+    entities: `// Entity Classes - Mantienen la misma interfaz que el sistema original
 
 class EntityBase {
   protected client: ApiClient;
@@ -172,7 +172,7 @@ interface VehicleData {
           API Client de Reemplazo
         </h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Cliente API que mantiene exactamente la misma interfaz que base44, 
+          Cliente API que mantiene exactamente la misma interfaz que el sistema original,
           permitiendo migrar sin cambios en tus componentes React
         </p>
       </div>
@@ -248,7 +248,7 @@ interface VehicleData {
             <div>
               <h4 className="font-medium text-green-800 mb-3">✅ Compatibilidad Total</h4>
               <ul className="text-sm text-green-700 space-y-2">
-                <li>• Misma interfaz que base44</li>
+                <li>• Misma interfaz que la API anterior</li>
                 <li>• Métodos idénticos: list(), create(), update(), delete()</li>
                 <li>• Filtros y ordenamiento compatibles</li>
                 <li>• Manejo de errores integrado</li>

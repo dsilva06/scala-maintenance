@@ -1,8 +1,7 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Database, Code, Settings, Rocket, DollarSign } from 'lucide-react';
+import { Database, Code, Rocket, DollarSign } from 'lucide-react';
 
 export default function MigrationGuide() {
   return (
@@ -190,10 +189,10 @@ CREATE TABLE trips (
               <CardContent>
                 <div className="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto">
                   <pre className="text-sm">
-{`// Reemplaza las llamadas de base44
+{`// Reemplaza las llamadas de la API anterior
 import { Vehicle, Trip, Driver } from '@/lib/api-client';
 
-// Antes (base44):
+// Antes (API anterior):
 await Vehicle.list()
 await Vehicle.create(data)
 await Vehicle.update(id, data)
@@ -210,7 +209,7 @@ await VehicleAPI.update(id, data)
                   <div className="p-4 bg-green-50 rounded-lg">
                     <h4 className="font-medium text-green-800 mb-2">✅ Ventajas</h4>
                     <ul className="text-sm text-green-700 space-y-1">
-                      <li>• Misma interfaz que base44</li>
+                      <li>• Misma interfaz que la API anterior</li>
                       <li>• Sin cambios en componentes</li>
                       <li>• TypeScript completo</li>
                       <li>• Manejo de errores integrado</li>

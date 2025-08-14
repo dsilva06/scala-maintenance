@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { SparePart } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import InventoryTable from "../components/inventory/InventoryTable";
 import SparePartForm from "../components/inventory/SparePartForm";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, AlertCircle, CheckCircle, TrendingUp, Search, Filter } from "lucide-react";
+import { AlertCircle, CheckCircle, TrendingUp, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner"; 
 

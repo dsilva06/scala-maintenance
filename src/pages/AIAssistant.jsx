@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, User, Send, Plus, MessageSquare, Loader2, Mic, Paperclip } from 'lucide-react';

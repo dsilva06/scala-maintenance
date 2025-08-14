@@ -1,27 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Trip, Vehicle } from "@/api/entities";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Plus, 
-  Map, 
-  Navigation, 
-  Clock, 
-  MapPin, 
-  Truck, 
-  Search,
-  Filter,
-  AlertTriangle,
-  List,
-  Eye,
-  Route,
-  Calendar,
-  User
-} from "lucide-react";
-import { format, isToday, isYesterday, subDays } from "date-fns";
+import { Plus, Map, Search, List } from "lucide-react";
+import { isToday, isYesterday, subDays } from "date-fns";
 
 import TripCard from "../components/trips/TripCard";
 import TripForm from "../components/trips/TripForm";

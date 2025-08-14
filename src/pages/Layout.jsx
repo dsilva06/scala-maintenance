@@ -1,33 +1,28 @@
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { 
-  Car, 
-  Settings, 
-  ClipboardCheck, 
-  Package, 
-  FileText, 
-  Calendar,
+import {
+  Car,
+  Settings,
+  ClipboardCheck,
+  Package,
+  FileText,
   BarChart3,
   Menu,
   Bell,
   Search,
   Map,
-  ChevronDown,
-  ChevronRight,
   Bot,
-  Zap,
   BookOpen,
   ShoppingCart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 
 import AlertCard from "@/components/alerts/AlertCard";
-import { Alert, SparePart, Document, MaintenanceOrder } from "@/api/entities";
+import { SparePart, Document, MaintenanceOrder } from "@/api/entities";
 
 const navigationItems = [
   {
@@ -79,10 +74,9 @@ const navigationItems = [
 
 const bottomNavItems = [
     { title: "Asistente AI", url: createPageUrl("AIAssistant"), icon: Bot },
-    { title: "Guía de Migración", url: createPageUrl("MigrationGuide"), icon: Zap },
 ];
 
-export default function Layout({ children, currentPageName }) {
+export default function Layout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const [alerts, setAlerts] = useState([]);
