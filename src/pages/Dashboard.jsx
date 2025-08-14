@@ -1,10 +1,8 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Vehicle, MaintenanceOrder, Inspection, SparePart, Document } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -12,22 +10,15 @@ import {
   Settings,
   AlertTriangle,
   CheckCircle,
-  Clock,
   TrendingUp,
-  FileText,
-  Package,
   Calendar,
   Activity,
-  GripVertical,
-  Eye,
-  EyeOff,
-  ListOrdered // New icon for Smart Flow
+  GripVertical
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 import DashboardStats from "../components/dashboard/DashboardStats";
 import VehicleStatusCard from "../components/dashboard/VehicleStatusCard";
-import MaintenanceCalendar from "../components/dashboard/MaintenanceCalendar";
 import AlertsPanel from "../components/dashboard/AlertsPanel";
 import AIInsights from "../components/dashboard/AIInsights";
 import SmartFlowWidget from "../components/dashboard/SmartFlowWidget"; // New component for Smart Flow
@@ -128,8 +119,7 @@ export default function Dashboard() {
     return { total, pending, inProgress, completed };
   };
 
-  const getCriticalAlerts = () => {
-    const alerts = [];
+    const getCriticalAlerts = () => {
 
     // Documentos próximos a vencer
     const expiringSoon = documents.filter(doc => {
