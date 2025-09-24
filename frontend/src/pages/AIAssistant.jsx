@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Bot, User, Send, Plus, MessageSquare, Loader2, Mic, Paperclip } from 'lucide-react';
 import { ChatMessage, Vehicle, MaintenanceOrder, Trip, SparePart, Inspection, Document } from '@/api/entities';
 import { InvokeLLM } from '@/api/integrations';
+import { buildAssistantPrompt, createCompanyDataSnapshot } from '@/lib/aiPromptBuilder';
 import { toast } from 'sonner';
 import { groupBy, orderBy } from 'lodash';
 
@@ -44,7 +45,15 @@ export default function AIAssistant() {
                 Inspection.list('-inspection_date', 100),
                 Document.list('-expiration_date', 100)
             ]);
-            setCompanyData({ vehicles, maintenanceOrders, trips, spareParts, inspections, documents });
+            const snapshot = createCompanyDataSnapshot({
+                vehicles,
+                maintenanceOrders,
+                trips,
+                spareParts,
+                inspections,
+                documents
+            });
+            setCompanyData(snapshot);
         } catch (error) {
             console.error("Error loading company-wide data:", error);
             toast.error("Error al cargar los datos de la empresa para el asistente.");
@@ -104,16 +113,7 @@ export default function AIAssistant() {
         try {
             await ChatMessage.create(userMessage);
 
-            const dataContext = JSON.stringify(companyData);
-            const prompt = `Eres ScalaFleet AI, un consultor experto en gestión de flotas vehiculares. 
-            Tu conocimiento se basa exclusivamente en los datos en tiempo real de la empresa que se proporcionan.
-            Sé profesional, preciso y basa tus respuestas únicamente en la información proporcionada.
-            Si no tienes información suficiente, indícalo claramente.
-
-            DATOS DE LA EMPRESA:
-            ${dataContext}
-
-            Pregunta del usuario: "${inputMessage}"`;
+            const prompt = buildAssistantPrompt(inputMessage, companyData);
             
             const aiResponseText = await InvokeLLM({ prompt });
 
