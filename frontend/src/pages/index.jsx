@@ -1,112 +1,50 @@
-import Layout from "./Layout.jsx";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-import Dashboard from "./Dashboard";
-
-import Vehicles from "./Vehicles";
-
-import Maintenance from "./Maintenance";
-
-import Inspections from "./Inspections";
-
-import Inventory from "./Inventory";
-
-import Documents from "./Documents";
-
-import Trips from "./Trips";
-
-import AIAssistant from "./AIAssistant";
-
-
-import Guides from "./Guides";
-
-import MaintenanceGuides from "./MaintenanceGuides";
-
-import Purchases from "./Purchases";
-
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
-
-const PAGES = {
-    
-    Dashboard: Dashboard,
-    
-    Vehicles: Vehicles,
-    
-    Maintenance: Maintenance,
-    
-    Inspections: Inspections,
-    
-    Inventory: Inventory,
-    
-    Documents: Documents,
-    
-    Trips: Trips,
-    
-    AIAssistant: AIAssistant,
-    
-    Guides: Guides,
-    
-    MaintenanceGuides: MaintenanceGuides,
-    
-    Purchases: Purchases,
-    
-}
-
-function _getCurrentPage(url) {
-    if (url.endsWith('/')) {
-        url = url.slice(0, -1);
-    }
-    let urlLastPart = url.split('/').pop();
-    if (urlLastPart.includes('?')) {
-        urlLastPart = urlLastPart.split('?')[0];
-    }
-
-    const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
-    return pageName || Object.keys(PAGES)[0];
-}
-
-// Create a wrapper component that uses useLocation inside the Router context
-function PagesContent() {
-    const location = useLocation();
-    const currentPage = _getCurrentPage(location.pathname);
-    
-    return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Dashboard />} />
-                
-                
-                <Route path="/Dashboard" element={<Dashboard />} />
-                
-                <Route path="/Vehicles" element={<Vehicles />} />
-                
-                <Route path="/Maintenance" element={<Maintenance />} />
-                
-                <Route path="/Inspections" element={<Inspections />} />
-                
-                <Route path="/Inventory" element={<Inventory />} />
-                
-                <Route path="/Documents" element={<Documents />} />
-                
-                <Route path="/Trips" element={<Trips />} />
-                
-                <Route path="/AIAssistant" element={<AIAssistant />} />
-                
-                <Route path="/Guides" element={<Guides />} />
-                
-                <Route path="/MaintenanceGuides" element={<MaintenanceGuides />} />
-                
-                <Route path="/Purchases" element={<Purchases />} />
-                
-            </Routes>
-        </Layout>
-    );
-}
+import Layout from './Layout.jsx';
+import Dashboard from './Dashboard';
+import Vehicles from './Vehicles';
+import Maintenance from './Maintenance';
+import Inspections from './Inspections';
+import Inventory from './Inventory';
+import Documents from './Documents';
+import Trips from './Trips';
+import Guides from './Guides';
+import MaintenanceGuides from './MaintenanceGuides';
+import Purchases from './Purchases';
+import AccessDenied from './AccessDenied.jsx';
+import Landing from './Landing.jsx';
+import Login from './Login.jsx';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function Pages() {
-    return (
-        <Router>
-            <PagesContent />
-        </Router>
-    );
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/app" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="access-denied" element={<AccessDenied />} />
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'employee']} redirectTo="/app/access-denied" />}>
+              <Route path="vehicles" element={<Vehicles />} />
+              <Route path="maintenance" element={<Maintenance />} />
+              <Route path="inspections" element={<Inspections />} />
+              <Route path="trips" element={<Trips />} />
+              <Route path="guides" element={<Guides />} />
+              <Route path="maintenance-guides" element={<MaintenanceGuides />} />
+            </Route>
+            <Route element={<ProtectedRoute allowedRoles={['admin']} redirectTo="/app/access-denied" />}>
+              <Route path="inventory" element={<Inventory />} />
+              <Route path="documents" element={<Documents />} />
+              <Route path="purchases" element={<Purchases />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/app" replace />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
+  );
 }

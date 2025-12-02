@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class VehicleUpdateRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $vehicle = $this->route('vehicle');
+        $userId = $this->user()?->id;
+
+        return [
+            'plate' => [
+                'sometimes',
+                'string',
+                'max:50',
+                Rule::unique('vehicles', 'plate')
+                    ->where('user_id', $userId)
+                    ->ignore($vehicle?->id),
+            ],
+            'brand' => ['sometimes', 'string', 'max:100'],
+            'model' => ['sometimes', 'string', 'max:100'],
+            'year' => ['nullable', 'integer', 'between:1900,' . ((int) date('Y') + 1)],
+            'color' => ['nullable', 'string', 'max:50'],
+            'vin' => ['nullable', 'string', 'max:120'],
+            'current_mileage' => ['nullable', 'integer', 'min:0'],
+            'vehicle_type' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', 'string', 'max:50'],
+            'fuel_type' => ['nullable', 'string', 'max:50'],
+            'last_service_date' => ['nullable', 'date'],
+            'next_service_date' => ['nullable', 'date'],
+            'assigned_driver' => ['nullable', 'string', 'max:120'],
+            'metadata' => ['nullable', 'array'],
+        ];
+    }
+}

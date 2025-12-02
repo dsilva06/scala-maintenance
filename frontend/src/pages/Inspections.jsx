@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { Inspection, Vehicle, MaintenanceOrder } from "@/api/entities";
+import { Inspection, Vehicle } from "@/api/entities";
+import { createMaintenanceOrder } from "@/api/maintenanceOrders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, ClipboardCheck, Search, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
@@ -95,8 +96,8 @@ export default function Inspections() {
       if (inspection.overall_status === 'no_disponible') {
         const criticalItems = inspection.checklist_items.filter(i => i.status === 'critico');
         for (const item of criticalItems) {
-          await MaintenanceOrder.create({
-            vehicle_id: inspection.vehicle_id,
+          await createMaintenanceOrder({
+            vehicle_id: Number(inspection.vehicle_id),
             order_number: `MNT-CRIT-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             type: 'correctivo',
             priority: 'critica',
@@ -111,8 +112,8 @@ export default function Inspections() {
       if (inspection.overall_status === 'limitado') {
         const observationItems = inspection.checklist_items.filter(i => i.status === 'observacion');
         for (const item of observationItems) {
-          await MaintenanceOrder.create({
-            vehicle_id: inspection.vehicle_id,
+          await createMaintenanceOrder({
+            vehicle_id: Number(inspection.vehicle_id),
             order_number: `MNT-OBS-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             type: 'preventivo',
             priority: 'media',
@@ -151,8 +152,8 @@ export default function Inspections() {
           const mileageDelta = currentMileage - previousInspection.mileage;
 
           if (mileageDelta >= 5000) {
-            await MaintenanceOrder.create({
-              vehicle_id: vehicleId,
+            await createMaintenanceOrder({
+              vehicle_id: Number(vehicleId),
               order_number: `MNT-AUTO-${Date.now()}`,
               type: 'preventivo',
               priority: 'media',

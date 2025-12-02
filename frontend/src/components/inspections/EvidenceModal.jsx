@@ -3,71 +3,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Upload, Bot, Loader2 } from 'lucide-react';
-import { UploadFile, InvokeLLM } from '@/api/integrations';
+import { Upload } from 'lucide-react';
 
 export default function EvidenceModal({ isOpen, onClose, onSave, itemName }) {
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [comment, setComment] = useState('');
     const [numericValue, setNumericValue] = useState('');
-    const [isLoadingAI, setIsLoadingAI] = useState(false);
-    const [aiResult, setAiResult] = useState(null);
 
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
             setFile(selectedFile);
             setPreview(URL.createObjectURL(selectedFile));
-            await analyzeImage(selectedFile);
         }
     };
 
-    const analyzeImage = async (imageFile) => {
-        setIsLoadingAI(true);
-        setAiResult(null);
-        try {
-            const { file_url } = await UploadFile({ file: imageFile });
-            const result = await InvokeLLM({
-                prompt: `Analiza la siguiente imagen de un componente vehicular (${itemName}). Detecta posibles desgastes, fugas, grietas o corrosión. Determina si el estado es 'ok', 'observacion' o 'critico' y proporciona una recomendación breve.`,
-                file_urls: [file_url],
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        status: { type: "string", enum: ["ok", "observacion", "critico"] },
-                        suggestion: { type: "string" }
-                    },
-                    required: ["status", "suggestion"]
-                }
-            });
-            setAiResult(result);
-        } catch (error) {
-            console.error("Error en análisis de IA:", error);
-            setAiResult({ status: 'error', suggestion: 'No se pudo analizar la imagen.' });
-        } finally {
-            setIsLoadingAI(false);
-        }
-    };
-
-    const handleSave = async () => {
-        let file_url = null;
-        if (file) {
-            try {
-                const uploadResult = await UploadFile({ file });
-                file_url = uploadResult.file_url;
-            } catch (error) {
-                console.error("Error al subir archivo:", error);
-                // Opcional: mostrar error al usuario
-                return;
-            }
-        }
-        
+    const handleSave = () => {
         onSave({
-            file_url,
+            file,
             comment,
             numeric_value: numericValue ? parseFloat(numericValue) : null,
-            ai_suggestion: aiResult?.suggestion || null,
-            ai_status: aiResult?.status || null
         });
         resetAndClose();
     };
@@ -77,8 +33,6 @@ export default function EvidenceModal({ isOpen, onClose, onSave, itemName }) {
         setPreview(null);
         setComment('');
         setNumericValue('');
-        setIsLoadingAI(false);
-        setAiResult(null);
         onClose();
     };
 
@@ -106,24 +60,6 @@ export default function EvidenceModal({ isOpen, onClose, onSave, itemName }) {
                             </label>
                         </div>
                     </div>
-                    
-                    {isLoadingAI && (
-                        <div className="flex items-center gap-2 text-blue-600">
-                            <Loader2 className="w-4 h-4 animate-spin"/>
-                            <span>Analizando con IA...</span>
-                        </div>
-                    )}
-                    
-                    {aiResult && (
-                        <div className="p-3 bg-blue-50 border-l-4 border-blue-400">
-                            <div className="flex items-center gap-2">
-                                <Bot className="w-5 h-5 text-blue-700"/>
-                                <p className="font-semibold text-blue-800">Sugerencia de IA</p>
-                            </div>
-                            <p className="text-sm text-blue-700 mt-1">Estado sugerido: <span className="font-bold capitalize">{aiResult.status}</span></p>
-                            <p className="text-sm text-blue-700">Recomendación: {aiResult.suggestion}</p>
-                        </div>
-                    )}
                     
                     <div className="space-y-2">
                         <Label htmlFor="comment">Comentario (Opcional)</Label>

@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, MapPin, Search } from 'lucide-react';
-import { InvokeLLM } from '@/api/integrations';
 import { debounce } from 'lodash';
 
 export default function LocationSearchInput({ value, onSelect, placeholder }) {
@@ -21,31 +20,8 @@ export default function LocationSearchInput({ value, onSelect, placeholder }) {
     
     setIsLoading(true);
     try {
-      const response = await InvokeLLM({
-        add_context_from_internet: true,
-        prompt: `Busca ubicaciones geográficas para la consulta: "${searchQuery}". Proporciona una lista concisa de 5 resultados con nombre, ciudad, país, latitud y longitud. Sé breve y preciso.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            places: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  address: { type: "string", description: "City, Country" },
-                  lat: { type: "number" },
-                  lng: { type: "number" }
-                },
-                required: ["name", "address", "lat", "lng"]
-              }
-            }
-          },
-          required: ["places"]
-        }
-      });
-      
-      setResults(response.places || []);
+      // AI location lookup temporarily disabled while the agent is offline.
+      setResults([]);
     } catch (error) {
       console.error("Error fetching locations:", error);
       setResults([]);

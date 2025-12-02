@@ -1,6 +1,8 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { Vehicle, MaintenanceOrder, Inspection, SparePart, Document } from "@/api/entities";
+import { Vehicle, Inspection, Document } from "@/api/entities";
+import { listMaintenanceOrders } from "@/api/maintenanceOrders";
+import { listSpareParts } from "@/api/spareParts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -29,7 +31,7 @@ const defaultWidgets = [
   { id: 'fleet-status', name: 'Estado de la Flota' },
   { id: 'alerts', name: 'Alertas' },
   { id: 'maintenance-calendar', name: 'Próximos Mantenimientos' },
-  { id: 'ai-insights', name: 'ScalaFleet AI Insights' },
+  { id: 'ai-insights', name: 'FLOTA AI Insights' },
   { id: 'smart-flow', name: 'Guías y Flujo de Órdenes Inteligente' }, // New Widget
 ];
 
@@ -51,10 +53,10 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       const [vehiclesData, ordersData, inspectionsData, partsData, documentsData] = await Promise.all([
-        Vehicle.list('-created_date', 500), // Optimization: Limit data load
-        MaintenanceOrder.list('-created_date', 500), // Optimization: Limit data load
+        Vehicle.list('-created_date', 500), // TODO: replace with real API when module ready
+        listMaintenanceOrders({ sort: '-created_at', limit: 500 }),
         Inspection.list('-inspection_date', 200), // Optimization: Limit data load
-        SparePart.list('-created_date', 1000), // Optimization: Limit data load
+        listSpareParts({ sort: '-created_at', limit: 1000 }),
         Document.list('-expiration_date', 500) // Optimization: Limit data load
       ]);
 
@@ -276,7 +278,7 @@ export default function Dashboard() {
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="w-5 h-5 text-indigo-600" />
-                  ScalaFleet AI Insights
+                  FLOTA AI Insights
                 </CardTitle>
               </CardHeader>
               <CardContent>

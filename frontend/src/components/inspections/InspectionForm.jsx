@@ -11,7 +11,7 @@ import AddItemPanel from './AddItemPanel';
 import ChecklistItem from './ChecklistItem';
 
 // Lógica de guardado movida al componente del formulario
-import { MaintenanceOrder, Vehicle } from "@/api/entities";
+import { Vehicle } from "@/api/entities";
 
 const INSPECTION_CATEGORIES = {
   "Motor": ["Fugas de aceite", "Correas / poleas", "Ruidos anómalos", "Bujías", "Inyectores"],

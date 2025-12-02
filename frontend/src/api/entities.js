@@ -17,11 +17,6 @@ export const Trip = apiClient.entities.Trip;
 
 export const Alert = apiClient.entities.Alert;
 
-export const ChatMessage = apiClient.entities.ChatMessage;
-
 export const Driver = apiClient.entities.Driver;
 
-
-
-// auth sdk:
 export const User = apiClient.auth;

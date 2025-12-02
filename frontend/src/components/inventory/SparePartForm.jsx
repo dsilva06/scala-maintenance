@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Package, Upload, Loader2, ImageOff, AlertTriangle } from "lucide-react";
-import { UploadFile } from "@/api/integrations";
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -48,13 +47,22 @@ export default function SparePartForm({ part, onSubmit, onCancel, existingParts 
 
     setIsUploading(true);
     try {
-      const { file_url } = await UploadFile({ file });
-      handleChange('photo_url', file_url);
-      toast.success('Imagen subida correctamente.');
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        handleChange('photo_url', result);
+        toast.success('Imagen cargada correctamente.');
+        setIsUploading(false);
+      };
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        toast.error('No se pudo cargar la imagen.');
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error("Error uploading file:", error);
-      toast.error('Error al subir la imagen.');
-    } finally {
+      console.error("Error processing file:", error);
+      toast.error('No se pudo cargar la imagen.');
       setIsUploading(false);
     }
   };

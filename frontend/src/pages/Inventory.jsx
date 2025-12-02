@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { SparePart } from "@/api/entities";
+import { listSpareParts, createSparePart, updateSparePart, deleteSparePart } from "@/api/spareParts";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import InventoryTable from "../components/inventory/InventoryTable";
@@ -47,8 +47,8 @@ export default function Inventory() {
   const loadParts = async () => {
     setIsLoading(true);
     try {
-      const data = await SparePart.list();
-      setParts(data);
+      const data = await listSpareParts({ sort: 'name', limit: 500 });
+      setParts(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error loading spare parts:", error);
     } finally {
@@ -59,10 +59,10 @@ export default function Inventory() {
   const handleFormSubmit = async (partData) => {
     try {
       if (editingPart) {
-        await SparePart.update(editingPart.id, partData);
+        await updateSparePart(editingPart.id, partData);
         toast.success('Repuesto actualizado correctamente.');
       } else {
-        await SparePart.create(partData);
+        await createSparePart(partData);
         toast.success('Repuesto creado correctamente.');
       }
       setShowForm(false);
@@ -80,9 +80,25 @@ export default function Inventory() {
     setEditingPart(part);
     setShowForm(true);
   };
+
+  const handleDelete = async (partId) => {
+    if (!window.confirm('¿Eliminar este repuesto?')) return;
+    try {
+      await deleteSparePart(partId);
+      toast.success('Repuesto eliminado correctamente.');
+      loadParts();
+    } catch (error) {
+      console.error('Error deleting spare part:', error);
+      toast.error('No se pudo eliminar el repuesto');
+    }
+  };
   
   const getInventoryStats = () => {
-      const totalValue = parts.reduce((sum, p) => sum + (p.current_stock * p.unit_cost), 0);
+      const totalValue = parts.reduce((sum, p) => {
+        const stock = Number(p.current_stock ?? 0);
+        const unitCost = Number(p.unit_cost ?? 0);
+        return sum + stock * unitCost;
+      }, 0);
       const lowStock = parts.filter(p => getPartStatus(p) === 'low').length;
       const okStock = parts.filter(p => getPartStatus(p) === 'ok').length;
       const overStock = parts.filter(p => getPartStatus(p) === 'over').length;
@@ -133,7 +149,7 @@ export default function Inventory() {
             <Card><CardContent className="p-4"><h4 className="text-sm font-medium flex items-center gap-1"><TrendingUp className="text-red-500 w-4 h-4"/>Sobre-Stock</h4><p className="text-xl font-bold">{stats.overStock}</p></CardContent></Card>
         </div>
 
-        <InventoryTable parts={filteredParts} isLoading={isLoading} onEdit={handleEdit} />
+        <InventoryTable parts={filteredParts} isLoading={isLoading} onEdit={handleEdit} onDelete={handleDelete} />
 
         {showForm && (
           <SparePartForm

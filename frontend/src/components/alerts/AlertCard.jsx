@@ -3,7 +3,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Check, X, Loader2, AlertTriangle, Package, FileText, Settings } from 'lucide-react';
-import { Alert, MaintenanceOrder, SparePart, Document } from '@/api/entities';
+import { Alert, Document } from '@/api/entities';
+import { updateSparePart } from '@/api/spareParts';
+import { createMaintenanceOrder } from '@/api/maintenanceOrders';
 import { toast } from 'sonner';
 
 export default function AlertCard({ alert, onUpdate }) {
@@ -36,7 +38,7 @@ export default function AlertCard({ alert, onUpdate }) {
       switch (alert.type) {
         case 'stock':
           if (alert.action_data?.part_id) {
-            await SparePart.update(alert.related_entity_id, {
+            await updateSparePart(alert.related_entity_id, {
               current_stock: alert.action_data.suggested_quantity || 50
             });
             success = true;
@@ -46,8 +48,8 @@ export default function AlertCard({ alert, onUpdate }) {
 
         case 'maintenance':
           if (alert.action_data?.vehicle_id) {
-            await MaintenanceOrder.create({
-              vehicle_id: alert.action_data.vehicle_id,
+            await createMaintenanceOrder({
+              vehicle_id: Number(alert.action_data.vehicle_id),
               order_number: `MNT-AI-${Date.now()}`,
               type: 'correctivo',
               priority: 'alta',

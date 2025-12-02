@@ -3,9 +3,9 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, ImageOff, Package } from 'lucide-react'; // Added Package import
+import { Edit, ImageOff, Package, Trash2 } from 'lucide-react';
 
-export default function InventoryTable({ parts, isLoading, onEdit }) {
+export default function InventoryTable({ parts, isLoading, onEdit, onDelete }) {
   const getStockStatus = (part) => {
     if (part.current_stock <= part.minimum_stock) {
       return <Badge variant="destructive">Bajo</Badge>;
@@ -76,14 +76,21 @@ export default function InventoryTable({ parts, isLoading, onEdit }) {
                 <span className="font-semibold text-lg">{part.current_stock}</span> {/* Styled Stock */}
               </TableCell>
               <TableCell className="text-center text-gray-600">{part.minimum_stock}</TableCell> {/* Added text-gray-600 */}
-              <TableCell className="text-right font-medium"> {/* Added font-medium */}
-                ${part.unit_cost?.toLocaleString('en-US', { minimumFractionDigits: 2 })} {/* Updated toLocaleString */}
+              <TableCell className="text-right font-medium">
+                {typeof part.unit_cost === 'number'
+                  ? `$${part.unit_cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                  : '—'}
               </TableCell>
               <TableCell className="text-center">{getStockStatus(part)}</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => onEdit(part)} className="hover:bg-blue-50"> {/* Added hover class to button */}
+              <TableCell className="text-right flex justify-end gap-2">
+                <Button variant="ghost" size="icon" onClick={() => onEdit(part)} className="hover:bg-blue-50">
                   <Edit className="w-4 h-4" />
                 </Button>
+                {onDelete && (
+                  <Button variant="ghost" size="icon" onClick={() => onDelete(part.id)} className="hover:bg-red-50 text-red-600">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}

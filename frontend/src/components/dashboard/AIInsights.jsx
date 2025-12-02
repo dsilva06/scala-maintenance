@@ -127,7 +127,7 @@ export default function AIInsights({ vehicles, maintenanceOrders, spareParts }) 
       <div className="text-center pt-2">
         <p className="text-xs text-gray-500">
           <Activity className="w-3 h-3 inline mr-1" />
-          Insights generados por ScalaFleet AI
+          Insights generados por FLOTA AI
         </p>
       </div>
     </div>

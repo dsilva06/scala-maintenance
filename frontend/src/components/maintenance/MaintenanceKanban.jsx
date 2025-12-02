@@ -29,8 +29,9 @@ const columnColors = {
 
 
 const OrderCard = ({ order, vehicle, onEdit, index }) => {
+  const draggableId = order.id?.toString() ?? `order-${index}`;
   return (
-    <Draggable draggableId={order.id} index={index}>
+    <Draggable draggableId={draggableId} index={index}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
@@ -111,7 +112,7 @@ export default function MaintenanceKanban({ orders, vehicles, isLoading, onEdit,
                 >
                   {orders
                     .filter(o => o.status === column.id)
-                    .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
+                    .sort((a, b) => new Date(a.created_at ?? 0) - new Date(b.created_at ?? 0))
                     .map((order, index) => (
                       <OrderCard
                         key={order.id}

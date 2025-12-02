@@ -1,6 +1,6 @@
-# Scala Maintenance App
+# FLOTA Fleet Maintenance Platform
 
-A Vite + React frontend paired with a Laravel 11 backend.
+FLOTA is a Vite + React frontend paired with a Laravel 11 backend for managing fleet maintenance operations.
 
 ## Frontend
 

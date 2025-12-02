@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { Vehicle } from "@/api/entities";
+import { listVehicles, createVehicle, updateVehicle, deleteVehicle } from "@/api/vehicles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import {
   Search,
   Car
 } from "lucide-react";
+import { toast } from "sonner";
 
 import VehicleForm from "../components/vehicles/VehicleForm";
 import VehicleCard from "../components/vehicles/VehicleCard";
@@ -50,10 +51,11 @@ export default function Vehicles() {
 
   const loadVehicles = async () => {
     try {
-      const data = await Vehicle.list('-created_date');
+      const data = await listVehicles({ sort: '-created_at' });
       setVehicles(data);
     } catch (error) {
       console.error("Error loading vehicles:", error);
+      toast.error("No se pudieron cargar los vehículos");
     } finally {
       setIsLoading(false);
     }
@@ -62,16 +64,16 @@ export default function Vehicles() {
   const handleSubmit = async (vehicleData) => {
     try {
       if (editingVehicle) {
-        await Vehicle.update(editingVehicle.id, vehicleData);
+        await updateVehicle(editingVehicle.id, vehicleData);
       } else {
-        await Vehicle.create(vehicleData);
+        await createVehicle(vehicleData);
       }
       setShowForm(false);
       setEditingVehicle(null);
       loadVehicles();
     } catch (error) {
       console.error("Error saving vehicle:", error);
-      alert(`Error al guardar el vehículo: ${error.message || error}`);
+      toast.error("Error al guardar el vehículo");
     }
   };
 
@@ -83,11 +85,11 @@ export default function Vehicles() {
   const handleDelete = async (vehicleId) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este vehículo?")) {
       try {
-        await Vehicle.delete(vehicleId);
+        await deleteVehicle(vehicleId);
         loadVehicles();
       } catch (error) {
         console.error("Error deleting vehicle:", error);
-        alert(`Error al eliminar el vehículo: ${error.message || error}`);
+        toast.error("Error al eliminar el vehículo");
       }
     }
   };

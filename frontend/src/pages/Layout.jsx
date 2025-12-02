@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Car,
   Settings,
@@ -13,7 +12,6 @@ import {
   Bell,
   Search,
   Map,
-  Bot,
   BookOpen,
   ShoppingCart
 } from "lucide-react";
@@ -22,65 +20,89 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input";
 
 import AlertCard from "@/components/alerts/AlertCard";
-import { SparePart, Document, MaintenanceOrder } from "@/api/entities";
+import { Document } from "@/api/entities";
+import { listMaintenanceOrders } from "@/api/maintenanceOrders";
+import { listSpareParts } from "@/api/spareParts";
+import { useAuth } from "@/auth/AuthContext";
+
+const ADMIN_ONLY = ["admin"];
+const ADMIN_EMPLOYEE = ["admin", "employee"];
 
 const navigationItems = [
   {
     title: "Dashboard",
-    url: createPageUrl("Dashboard"),
+    url: "/app",
     icon: BarChart3,
+    roles: ADMIN_EMPLOYEE,
   },
   {
     title: "Inventario",
-    url: createPageUrl("Inventory"),
+    url: "/app/inventory",
     icon: Package,
+    roles: ADMIN_ONLY,
   },
   {
     title: "Guías de Mantenimiento",
-    url: createPageUrl("MaintenanceGuides"),
+    url: "/app/maintenance-guides",
     icon: BookOpen,
+    roles: ADMIN_EMPLOYEE,
   },
   {
     title: "Mantenimiento",
-    url: createPageUrl("Maintenance"),
+    url: "/app/maintenance",
     icon: Settings,
+    roles: ADMIN_EMPLOYEE,
   },
   {
     title: "Compras",
-    url: createPageUrl("Purchases"),
+    url: "/app/purchases",
     icon: ShoppingCart,
+    roles: ADMIN_ONLY,
   },
   {
     title: "Vehículos",
-    url: createPageUrl("Vehicles"),
+    url: "/app/vehicles",
     icon: Car,
+    roles: ADMIN_EMPLOYEE,
   },
   {
     title: "Viajes",
-    url: createPageUrl("Trips"),
+    url: "/app/trips",
     icon: Map,
+    roles: ADMIN_EMPLOYEE,
   },
   {
     title: "Inspecciones",
-    url: createPageUrl("Inspections"),
+    url: "/app/inspections",
     icon: ClipboardCheck,
+    roles: ADMIN_EMPLOYEE,
   },
   {
     title: "Documentos",
-    url: createPageUrl("Documents"),
+    url: "/app/documents",
     icon: FileText,
+    roles: ADMIN_ONLY,
   },
 ];
 
-const bottomNavItems = [
-    { title: "Asistente AI", url: createPageUrl("AIAssistant"), icon: Bot },
-];
+// const bottomNavItems = [
+//     { title: "Asistente AI", url: createPageUrl("AIAssistant"), icon: Bot },
+// ];
 
-export default function Layout({ children }) {
+export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const userRole = (user?.role ?? "employee").toLowerCase();
   const [alerts, setAlerts] = useState([]);
   const [isLoadingAlerts, setIsLoadingAlerts] = useState(true);
+  const accessibleNavigationItems = navigationItems.filter((item) => {
+    if (!Array.isArray(item.roles) || item.roles.length === 0) {
+      return true;
+    }
+    return item.roles.includes(userRole);
+  });
 
   useEffect(() => {
     loadAlerts();
@@ -89,16 +111,48 @@ export default function Layout({ children }) {
   const loadAlerts = async () => {
     setIsLoadingAlerts(true);
     try {
+        const callIfAvailable = async (context, method, ...args) => {
+          if (!context || typeof context[method] !== 'function') {
+            return [];
+          }
+          try {
+            return await context[method].call(context, ...args);
+          } catch (error) {
+            console.error('Error calling data provider', error);
+            return [];
+          }
+        };
+
         const [expiringDocs, lowStockParts, criticalOrders] = await Promise.all([
-            Document.filter({ status: "proximo_a_vencer" }),
-            SparePart.filter({ stock_status: "bajo" }),
-            MaintenanceOrder.filter({ priority: "critica", status: "pendiente" }),
+            callIfAvailable(Document, 'filter', { status: "proximo_a_vencer" }),
+            (async () => {
+              try {
+                const parts = await listSpareParts({ sort: 'name', limit: 200 });
+                return parts.filter(part => {
+                  const current = Number(part.current_stock ?? 0);
+                  const minimum = Number(part.minimum_stock ?? 0);
+                  return current <= minimum;
+                });
+              } catch (error) {
+                console.error('Error loading spare part alerts', error);
+                return [];
+              }
+            })(),
+            (async () => {
+              try {
+                const orders = await listMaintenanceOrders({ sort: '-created_at', limit: 20, status: 'pendiente' });
+                return orders.filter(order => order.priority === 'critica');
+              } catch (error) {
+                console.error('Error loading maintenance alerts', error);
+                return [];
+              }
+            })(),
         ]);
 
         const allAlerts = [
             ...expiringDocs.map(d => ({ type: 'document', data: d, date: d.expiration_date })),
             ...lowStockParts.map(p => ({ type: 'inventory', data: p, date: p.updated_date })),
-            ...criticalOrders.map(o => ({ type: 'maintenance', data: o, date: o.created_date })),
+            ...criticalOrders.map(o => ({ type: 'maintenance', data: o, date: o.created_at ?? o.created_date })),
         ];
         
         // Sort alerts by date, most recent first
@@ -112,51 +166,57 @@ export default function Layout({ children }) {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error al cerrar sesión', error);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar - Apple-like design */}
       <div className={`bg-gray-900 text-white w-64 min-h-screen ${isSidebarOpen ? 'block' : 'hidden'} md:block`}>
         <div className="p-6">
-          <h1 className="text-xl font-semibold text-white tracking-tight">SCALA Fleet AI</h1>
+          <h1 className="text-xl font-semibold text-white tracking-tight">FLOTA</h1>
         </div>
         
         <nav className="px-4 space-y-1">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.title}
-              to={item.url}
-              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
-                item.url === location.pathname
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              <item.icon className={`mr-3 h-5 w-5 transition-colors ${
-                item.url === location.pathname ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'
-              }`} />
-              {item.title}
-            </Link>
-          ))}
+          {accessibleNavigationItems.length === 0 ? (
+            <div className="px-3 py-4 text-sm text-gray-400 border border-dashed border-gray-700 rounded-xl">
+              No tienes módulos asignados. Contacta a un administrador para obtener acceso.
+            </div>
+          ) : (
+            accessibleNavigationItems.map((item) => {
+              const isActive =
+                location.pathname === item.url ||
+                location.pathname.startsWith(`${item.url}/`);
+
+              return (
+                <Link
+                  key={item.title}
+                  to={item.url}
+                  className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  <item.icon
+                    className={`mr-3 h-5 w-5 transition-colors ${
+                      isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'
+                    }`}
+                  />
+                  {item.title}
+                </Link>
+              );
+            })
+          )}
         </nav>
 
-        <div className="absolute bottom-0 w-64 p-4 space-y-1 border-t border-gray-700">
-          {bottomNavItems.map((item) => (
-            <Link
-              key={item.title}
-              to={item.url}
-              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
-                item.url === location.pathname
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              <item.icon className={`mr-3 h-5 w-5 transition-colors ${
-                item.url === location.pathname ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'
-              }`} />
-              {item.title}
-            </Link>
-          ))}
-        </div>
+        {/* AI assistant entry temporarily disabled */}
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -214,12 +274,27 @@ export default function Layout({ children }) {
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+
+              {user && (
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:flex flex-col text-right">
+                    <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                    <span className="text-xs text-gray-500">{user.email}</span>
+                    <span className="text-[11px] uppercase tracking-wide text-gray-400">
+                      Rol: {userRole === 'admin' ? 'Administrador' : 'Colaborador'}
+                    </span>
+                  </div>
+                  <Button variant="outline" onClick={handleLogout} className="text-sm">
+                    Cerrar sesión
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

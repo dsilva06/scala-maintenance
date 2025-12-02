@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { RepairGuide, Vehicle, MaintenanceOrder, SparePart } from "@/api/entities";
+import { RepairGuide, Vehicle } from "@/api/entities";
+import { createMaintenanceOrder } from "@/api/maintenanceOrders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ function CreateOrderFromGuideModal({ guide, vehicles, spareParts, isOpen, onOpen
     
     try {
       const orderData = {
-        vehicle_id: selectedVehicleId,
+        vehicle_id: Number(selectedVehicleId),
         order_number: `MNT-GUIDE-${Date.now()}`,
         type: guide.type || 'correctivo',
         priority: guide.priority || 'media',
@@ -71,7 +72,7 @@ function CreateOrderFromGuideModal({ guide, vehicles, spareParts, isOpen, onOpen
         notes: `Orden generada desde la guía de reparación: "${guide.name}". Tiempo estimado: ${guide.estimated_time_hours}h.`
       };
       
-      await MaintenanceOrder.create(orderData);
+      await createMaintenanceOrder(orderData);
       toast.success("Orden de mantenimiento creada correctamente.");
       onOrderCreated();
       onOpenChange(false);
@@ -209,7 +210,7 @@ export default function Guides() {
       const [guidesData, vehiclesData, partsData] = await Promise.all([
         RepairGuide.list(),
         Vehicle.list(),
-        SparePart.list()
+        listSpareParts({ sort: 'name', limit: 500 })
       ]);
       setGuides(guidesData);
       setVehicles(vehiclesData);

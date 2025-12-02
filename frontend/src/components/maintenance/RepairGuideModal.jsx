@@ -6,12 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  X, 
-  Wrench, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  X,
+  Wrench,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
   Package,
   Shield,
   Play,
@@ -19,7 +19,9 @@ import {
   RotateCcw,
   Loader2
 } from 'lucide-react';
-import { RepairGuide, SparePart, MaintenanceOrder } from '@/api/entities';
+import { RepairGuide } from '@/api/entities';
+import { listSpareParts, updateSparePart } from '@/api/spareParts';
+import { getMaintenanceOrder, updateMaintenanceOrder } from '@/api/maintenanceOrders';
 import { toast } from 'sonner';
 
 export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, onUpdateInventory }) {
@@ -57,7 +59,7 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
     try {
       const [guidesData, partsData] = await Promise.all([
         RepairGuide.list(),
-        SparePart.list()
+        listSpareParts({ sort: 'name', limit: 500 })
       ]);
       setGuides(guidesData);
       setSpareParts(partsData);
@@ -157,7 +159,7 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
       // 1. Actualizar inventario
       for (const availablePart of inventoryCheck.availableParts) {
         const newStock = availablePart.part.current_stock - availablePart.quantity_needed;
-        await SparePart.update(availablePart.part.id, {
+        await updateSparePart(availablePart.part.id, {
           current_stock: newStock
         });
         partsUsedForLog.push({
@@ -170,10 +172,16 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
 
       // 2. Actualizar la orden de mantenimiento con los repuestos usados
       if (partsUsedForLog.length > 0) {
-        const currentOrder = await MaintenanceOrder.get(maintenanceOrder.id);
-        const updatedPartsUsed = [...(currentOrder.parts_used || []), ...partsUsedForLog];
-        await MaintenanceOrder.update(maintenanceOrder.id, {
-          parts_used: updatedPartsUsed
+        const currentOrder = await getMaintenanceOrder(maintenanceOrder.id);
+        const existingMetadata = currentOrder.metadata || {};
+        const currentPartsUsed = Array.isArray(existingMetadata.parts_used) ? existingMetadata.parts_used : [];
+        const updatedPartsUsed = [...currentPartsUsed, ...partsUsedForLog];
+
+        await updateMaintenanceOrder(maintenanceOrder.id, {
+          metadata: {
+            ...existingMetadata,
+            parts_used: updatedPartsUsed,
+          },
         });
       }
       

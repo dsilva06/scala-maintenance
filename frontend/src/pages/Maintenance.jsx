@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { MaintenanceOrder, Vehicle } from "@/api/entities";
+import { listMaintenanceOrders, createMaintenanceOrder, updateMaintenanceOrder } from "@/api/maintenanceOrders";
+import { listVehicles } from "@/api/vehicles";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -23,11 +24,11 @@ export default function Maintenance() {
     setIsLoading(true);
     try {
       const [ordersData, vehiclesData] = await Promise.all([
-        MaintenanceOrder.list('-created_date'),
-        Vehicle.list()
+        listMaintenanceOrders({ sort: '-created_at', limit: 200 }),
+        listVehicles({ sort: 'plate', limit: 500 })
       ]);
-      setOrders(ordersData);
-      setVehicles(vehiclesData);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
     } catch (error) {
       console.error("Error loading maintenance data:", error);
       toast.error("Error al cargar los datos de mantenimiento.");
@@ -39,9 +40,9 @@ export default function Maintenance() {
   const handleFormSubmit = async (orderData) => {
     try {
       if (editingOrder) {
-        await MaintenanceOrder.update(editingOrder.id, orderData);
+        await updateMaintenanceOrder(editingOrder.id, orderData);
       } else {
-        await MaintenanceOrder.create({
+        await createMaintenanceOrder({
           ...orderData,
           order_number: `MNT-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`
         });
@@ -51,6 +52,7 @@ export default function Maintenance() {
       loadData();
     } catch (error) {
       console.error("Error saving maintenance order:", error);
+      toast.error("Error al guardar la orden de mantenimiento");
     }
   };
 
@@ -61,10 +63,11 @@ export default function Maintenance() {
   
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      await MaintenanceOrder.update(orderId, { status: newStatus });
+      await updateMaintenanceOrder(Number(orderId), { status: newStatus });
       loadData();
     } catch (error) {
       console.error("Error updating order status:", error);
+      toast.error("No se pudo actualizar el estado");
     }
   };
 

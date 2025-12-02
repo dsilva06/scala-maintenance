@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Plus, Trash2, BookOpen, Package, ListChecks } from "lucide-react";
-import { SparePart } from "@/api/entities";
+import { listSpareParts } from "@/api/spareParts";
 import { toast } from "sonner";
 
 const TYPES = ["preventivo", "correctivo"];
@@ -32,7 +32,7 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
 
   useEffect(() => {
     const fetchParts = async () => {
-      const parts = await SparePart.list();
+      const parts = await listSpareParts({ sort: 'name', limit: 500 });
       setAvailableParts(parts);
     };
     fetchParts();

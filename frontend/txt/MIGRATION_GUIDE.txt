@@ -10,7 +10,7 @@ export default function MigrationGuide() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            🚚 SCALA Fleet AI - Migración Completa
+            🚚 FLOTA - Migración Completa
           </h1>
           <p className="text-xl text-gray-600 mb-6">
             Guía completa para hacer tu aplicación completamente independiente
@@ -131,7 +131,7 @@ export default function MigrationGuide() {
               <CardContent>
                 <div className="bg-gray-900 text-gray-100 p-6 rounded-lg overflow-x-auto">
                   <pre className="text-sm">
-{`-- SCALA Fleet AI - PostgreSQL Schema
+{`-- FLOTA - PostgreSQL Schema
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -398,7 +398,7 @@ await VehicleAPI.update(id, data)
         <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
           <CardContent className="p-8 text-center">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              ¿Listo para hacer SCALA Fleet AI completamente tuyo?
+              ¿Listo para hacer FLOTA completamente tuyo?
             </h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
               Con esta guía de migración tendrás todo lo necesario para crear una aplicación 

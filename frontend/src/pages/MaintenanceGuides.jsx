@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { RepairGuide, SparePart, Vehicle } from "@/api/entities";
+import { RepairGuide, Vehicle } from "@/api/entities";
+import { listSpareParts } from "@/api/spareParts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +36,7 @@ export default function MaintenanceGuides() {
     try {
       const [guidesData, partsData, vehiclesData] = await Promise.all([
         RepairGuide.list(),
-        SparePart.list(),
+        listSpareParts({ sort: 'name', limit: 500 }),
         Vehicle.list()
       ]);
       setGuides(guidesData);
