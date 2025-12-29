@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use App\Http\Requests\MaintenanceOrderStoreRequest;
 use App\Http\Requests\MaintenanceOrderUpdateRequest;
@@ -25,6 +26,16 @@ class MaintenanceOrderController extends Controller
 
         if ($vehicleId = $request->query('vehicle_id')) {
             $query->where('vehicle_id', $vehicleId);
+        }
+
+        if ($month = $request->query('month')) {
+            try {
+                $start = Carbon::parse($month . '-01')->startOfMonth();
+                $end = (clone $start)->endOfMonth();
+                $query->whereBetween('created_at', [$start, $end]);
+            } catch (\Exception $e) {
+                // ignore invalid month format
+            }
         }
 
         $this->applyQueryOptions($request, $query, [
@@ -45,6 +56,10 @@ class MaintenanceOrderController extends Controller
         $this->ensureVehicleBelongsToUser(Arr::get($validated, 'vehicle_id'), $user->id);
 
         $order = $user->maintenanceOrders()->create($this->normalizePayload($validated));
+
+        if ($order->vehicle_id) {
+            $this->refreshVehicleStatus($order->vehicle_id, $user->id);
+        }
 
         return JsonResource::make($order->load('vehicle'))->response()->setStatusCode(201);
     }
@@ -68,6 +83,10 @@ class MaintenanceOrderController extends Controller
 
         $maintenanceOrder->update($this->normalizePayload($validated));
 
+        if ($maintenanceOrder->vehicle_id) {
+            $this->refreshVehicleStatus($maintenanceOrder->vehicle_id, $request->user()->id);
+        }
+
         return JsonResource::make($maintenanceOrder->load('vehicle'));
     }
 
@@ -76,6 +95,10 @@ class MaintenanceOrderController extends Controller
         $this->authorizeOrder($request, $maintenanceOrder);
 
         $maintenanceOrder->delete();
+
+        if ($maintenanceOrder->vehicle_id) {
+            $this->refreshVehicleStatus($maintenanceOrder->vehicle_id, $request->user()->id);
+        }
 
         return new JsonResponse(null, 204);
     }
@@ -115,5 +138,21 @@ class MaintenanceOrderController extends Controller
         }
 
         return $attributes;
+    }
+
+    protected function refreshVehicleStatus(int $vehicleId, int $userId): void
+    {
+        $openStatuses = ['pendiente', 'en_progreso'];
+
+        $hasOpenOrders = MaintenanceOrder::where('vehicle_id', $vehicleId)
+            ->where('user_id', $userId)
+            ->whereIn('status', $openStatuses)
+            ->exists();
+
+        $newStatus = $hasOpenOrders ? 'mantenimiento' : 'activo';
+
+        Vehicle::where('id', $vehicleId)
+            ->where('user_id', $userId)
+            ->update(['status' => $newStatus]);
     }
 }

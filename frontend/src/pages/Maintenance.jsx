@@ -15,16 +15,20 @@ export default function Maintenance() {
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [monthFilter, setMonthFilter] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [monthFilter]);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
       const [ordersData, vehiclesData] = await Promise.all([
-        listMaintenanceOrders({ sort: '-created_at', limit: 200 }),
+        listMaintenanceOrders({ sort: '-created_at', limit: 200, month: monthFilter }),
         listVehicles({ sort: 'plate', limit: 500 })
       ]);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -85,7 +89,16 @@ export default function Maintenance() {
             <h1 className="text-2xl font-bold text-gray-900">Órdenes de Mantenimiento</h1>
             <p className="text-gray-600">Gestiona y monitorea todas las órdenes de servicio con guías inteligentes.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Mes:</label>
+              <input
+                type="month"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="h-10 rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
             <Button
               onClick={() => { setEditingOrder(null); setShowForm(true); }}
               className="bg-blue-600 hover:bg-blue-700"

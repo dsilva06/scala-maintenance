@@ -1,51 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Plus, Search, Filter, Package, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ShoppingCart, Plus, Search, Filter, Package, AlertTriangle, CheckCircle, Clock, Edit, Trash2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { PurchaseOrder } from "@/api/entities";
 
 export default function Purchases() {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [formData, setFormData] = useState({
+    order_number: "",
+    supplier: "",
+    product_name: "",
+    status: "draft",
+    priority: "media",
+    total_cost: 0,
+    items_count: 1,
+    expected_date: "",
+    notes: "",
+  });
 
   useEffect(() => {
     loadPurchaseOrders();
-  }, []);
+  }, [monthFilter]);
 
   const loadPurchaseOrders = async () => {
     setIsLoading(true);
     try {
-      // Simulando datos por ahora - en implementación real sería una llamada a la API
-      const mockData = [
-        {
-          id: "1",
-          order_number: "OC-2024-001",
-          supplier: "Repuestos Central",
-          status: "pending",
-          total_amount: 1250000,
-          created_date: "2024-01-15",
-          items_count: 5,
-          priority: "high"
-        },
-        {
-          id: "2", 
-          order_number: "OC-2024-002",
-          supplier: "AutoParts Pro",
-          status: "received",
-          total_amount: 850000,
-          created_date: "2024-01-12",
-          items_count: 3,
-          priority: "medium"
-        }
-      ];
-      
-      setPurchaseOrders(mockData);
+      const data = await PurchaseOrder.list({ sort: '-created_at', month: monthFilter });
+      setPurchaseOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error loading purchase orders:", error);
       toast.error("Error al cargar las órdenes de compra");
@@ -73,12 +69,93 @@ export default function Purchases() {
     }
   };
 
-  const filteredOrders = purchaseOrders.filter(order => {
+  const filteredOrders = useMemo(() => purchaseOrders.filter(order => {
     const searchMatch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        order.supplier.toLowerCase().includes(searchTerm.toLowerCase());
     const statusMatch = statusFilter === "all" || order.status === statusFilter;
     return searchMatch && statusMatch;
-  });
+  }), [purchaseOrders, searchTerm, statusFilter]);
+
+  const resetForm = () => {
+    setFormData({
+      order_number: "",
+      supplier: "",
+      product_name: "",
+      status: "draft",
+      priority: "media",
+      total_cost: 0,
+      items_count: 1,
+      expected_date: "",
+      notes: "",
+    });
+    setEditingOrder(null);
+  };
+
+  const openForm = (order = null) => {
+    if (order) {
+      setFormData({
+        order_number: order.order_number || "",
+        supplier: order.supplier || "",
+        product_name: order.product_name || "",
+        status: order.status || "draft",
+        priority: order.priority || "media",
+        total_cost: Number(order.total_cost ?? 0),
+        items_count: Number(order.items_count ?? 0),
+        expected_date: order.expected_date ? order.expected_date.split('T')[0] : "",
+        notes: order.notes || "",
+      });
+      setEditingOrder(order);
+    } else {
+      resetForm();
+    }
+    setShowForm(true);
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingOrder) {
+        await PurchaseOrder.update(editingOrder.id, formData);
+        toast.success("Orden de compra actualizada.");
+      } else {
+        const autoNumber = formData.order_number || `OC-${new Date().getFullYear()}-${String(purchaseOrders.length + 1).padStart(3, '0')}`;
+        const existing = purchaseOrders.find(
+          (po) => po.order_number === autoNumber && po.supplier.toLowerCase() === formData.supplier.toLowerCase()
+        );
+
+        if (existing) {
+          await PurchaseOrder.update(existing.id, {
+            total_cost: Number(existing.total_cost ?? 0) + Number(formData.total_cost ?? 0),
+            items_count: Number(existing.items_count ?? 0) + Number(formData.items_count ?? 1),
+            product_name: existing.product_name || formData.product_name,
+          });
+          toast.success("Ítem agregado a la orden existente.");
+        } else {
+          await PurchaseOrder.create({ ...formData, order_number: autoNumber });
+          toast.success("Orden de compra creada.");
+        }
+      }
+      setShowForm(false);
+      resetForm();
+      loadPurchaseOrders();
+    } catch (error) {
+      console.error("Error saving purchase order:", error);
+      const message = error.data?.message || "No se pudo guardar la orden de compra.";
+      toast.error(message);
+    }
+  };
+
+  const handleDelete = async (orderId) => {
+    if (!window.confirm("¿Eliminar esta orden de compra?")) return;
+    try {
+      await PurchaseOrder.delete(orderId);
+      toast.success("Orden eliminada.");
+      loadPurchaseOrders();
+    } catch (error) {
+      console.error("Error deleting purchase order:", error);
+      toast.error("No se pudo eliminar la orden.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -105,12 +182,24 @@ export default function Purchases() {
                 Gestión inteligente de abastecimiento y recepciones
               </p>
             </div>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-sm"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Nueva Orden de Compra
-            </Button>
+            <div className="flex items-center gap-3 flex-wrap justify-end">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Mes:</span>
+                <input
+                  type="month"
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  className="h-11 rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-sm"
+                onClick={() => openForm(null)}
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Nueva Orden de Compra
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -194,28 +283,44 @@ export default function Purchases() {
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-500">Total</span>
-                          <p className="font-semibold text-gray-900">
-                            ${order.total_amount.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Artículos</span>
+                        <span className="text-gray-500">Costo</span>
+                        <p className="font-semibold text-gray-900">
+                          ${Number(order.total_cost ?? 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                          <span className="text-gray-500">Cantidad</span>
                           <p className="font-semibold text-gray-900">
                             {order.items_count} items
+                          </p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-500">Producto</span>
+                          <p className="font-medium text-gray-800">
+                            {order.product_name || 'N/A'}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500">
-                          Creada: {new Date(order.created_date).toLocaleDateString()}
+                          Creada: {new Date(order.created_at || order.created_date).toLocaleDateString()}
                         </span>
-                        {order.priority === 'high' && (
+                        {order.priority === 'alta' && (
                           <Badge variant="outline" className="border-red-300 text-red-700 text-xs">
                             Alta Prioridad
                           </Badge>
                         )}
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openForm(order)}>
+                          <Edit className="w-3 h-3 mr-1" />
+                          Editar
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(order.id)}>
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Eliminar
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -238,13 +343,134 @@ export default function Purchases() {
                 : "Crea tu primera orden de compra para comenzar"
               }
             </p>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl" onClick={() => openForm(null)}>
               <Plus className="w-5 h-5 mr-2" />
               Nueva Orden de Compra
             </Button>
           </div>
         )}
       </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5" />
+                {editingOrder ? 'Editar Orden de Compra' : 'Nueva Orden de Compra'}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => { setShowForm(false); resetForm(); }}>
+                <X className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Número de Orden</label>
+                    <Input
+                      value={formData.order_number}
+                      onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
+                      placeholder="OC-2024-001"
+                      disabled={!!editingOrder}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Proveedor *</label>
+                    <Input
+                      value={formData.supplier}
+                      onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Producto *</label>
+                  <Input
+                    value={formData.product_name}
+                    onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
+                    placeholder="Nombre del producto"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Estado</label>
+                    <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Borrador</SelectItem>
+                        <SelectItem value="pending">Pendiente</SelectItem>
+                        <SelectItem value="sent">Enviada</SelectItem>
+                        <SelectItem value="partial">Parcial</SelectItem>
+                        <SelectItem value="received">Recibida</SelectItem>
+                        <SelectItem value="closed">Cerrada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Prioridad</label>
+                    <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="baja">Baja</SelectItem>
+                        <SelectItem value="media">Media</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Fecha esperada</label>
+                    <Input
+                      type="date"
+                      value={formData.expected_date}
+                      onChange={(e) => setFormData({ ...formData, expected_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                      <label className="block text-sm text-gray-700 mb-1">Costo</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.total_cost}
+                      onChange={(e) => setFormData({ ...formData, total_cost: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Cantidad</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={formData.items_count}
+                      onChange={(e) => setFormData({ ...formData, items_count: parseInt(e.target.value, 10) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Notas</label>
+                    <Textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Observaciones, condiciones, etc."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button type="button" variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                    {editingOrder ? 'Actualizar' : 'Guardar'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

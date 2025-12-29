@@ -3,13 +3,60 @@ import { httpClient } from '@/api/httpClient';
 
 const AuthContext = createContext(null);
 
-async function fetchCurrentUser() {
+const DEMO_CREDENTIALS = {
+  email: 'test@alca.com',
+  password: 'ALCA123',
+};
+
+const DEMO_USER = {
+  id: 'demo-user',
+  name: 'ALCA Demo',
+  email: DEMO_CREDENTIALS.email,
+  role: 'admin',
+};
+
+const STORAGE_KEY = 'flota-auth-user';
+
+function getStoredUser() {
   try {
-    return await httpClient.get('/api/user');
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (err) {
+    console.error('Error reading stored auth state', err);
+    return null;
+  }
+}
+
+function persistUser(user) {
+  try {
+    if (user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch (err) {
+    console.error('Error persisting auth state', err);
+  }
+}
+
+async function fetchCurrentUser() {
+  const storedUser = getStoredUser();
+
+  try {
+    const data = await httpClient.get('/api/auth/me');
+    persistUser(data);
+    return data;
   } catch (error) {
     if (error.status === 401) {
+      persistUser(null);
       return null;
     }
+
+    // If the backend is unreachable, fall back to the last known state.
+    if ((error instanceof TypeError || error?.message === 'Failed to fetch') && storedUser) {
+      return storedUser;
+    }
+
     throw error;
   }
 }
@@ -43,30 +90,56 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     setError(null);
-    await httpClient.post('/api/login', credentials);
-    const data = await fetchCurrentUser();
-    setUser(data);
-    setStatus('authenticated');
-    return data;
+    const normalizedEmail = (credentials?.email ?? '').trim().toLowerCase();
+    const isDemoLogin =
+      normalizedEmail === DEMO_CREDENTIALS.email && credentials?.password === DEMO_CREDENTIALS.password;
+
+    try {
+      await httpClient.post('/api/auth/login', credentials);
+      const data = await fetchCurrentUser();
+      persistUser(data);
+      setUser(data);
+      setStatus(data ? 'authenticated' : 'unauthenticated');
+      return data;
+    } catch (err) {
+      if (isDemoLogin && (err instanceof TypeError || err?.message === 'Failed to fetch')) {
+        persistUser(DEMO_USER);
+        setUser(DEMO_USER);
+        setStatus('authenticated');
+        return DEMO_USER;
+      }
+
+      persistUser(null);
+      setStatus('unauthenticated');
+      throw err;
+    }
   }, []);
 
   const register = useCallback(async (payload) => {
     setError(null);
-    await httpClient.post('/api/register', payload);
+    await httpClient.post('/api/auth/register', payload);
     const data = await fetchCurrentUser();
+    persistUser(data);
     setUser(data);
-    setStatus('authenticated');
+    setStatus(data ? 'authenticated' : 'unauthenticated');
     return data;
   }, []);
 
   const logout = useCallback(async () => {
-    await httpClient.post('/api/logout');
+    try {
+      await httpClient.post('/api/auth/logout');
+    } catch (err) {
+      console.error('Error during logout', err);
+    } finally {
+      persistUser(null);
+    }
     setUser(null);
     setStatus('unauthenticated');
   }, []);
 
   const refresh = useCallback(async () => {
     const data = await fetchCurrentUser();
+    persistUser(data);
     setUser(data);
     setStatus(data ? 'authenticated' : 'unauthenticated');
     return data;
@@ -96,4 +169,3 @@ export function useAuth() {
   }
   return context;
 }
-

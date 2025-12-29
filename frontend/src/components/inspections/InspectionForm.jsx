@@ -29,8 +29,9 @@ const INSPECTION_CATEGORIES = {
 };
 
 export default function InspectionForm({ inspection, vehicles, onSubmit, onCancel }) {
+  const [hasManualMileage, setHasManualMileage] = useState(Boolean(inspection?.mileage));
   const [formData, setFormData] = useState({
-    vehicle_id: inspection?.vehicle_id || "",
+    vehicle_id: inspection?.vehicle_id ? String(inspection.vehicle_id) : "",
     inspection_date: inspection?.inspection_date ? format(new Date(inspection.inspection_date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     inspector: inspection?.inspector || "",
     mileage: inspection?.mileage || 0,
@@ -39,6 +40,14 @@ export default function InspectionForm({ inspection, vehicles, onSubmit, onCance
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!formData.vehicle_id || hasManualMileage) return;
+    const vehicle = vehicles.find(v => String(v.id) === formData.vehicle_id);
+    if (vehicle && typeof vehicle.current_mileage === 'number') {
+      setFormData(prev => ({ ...prev, mileage: vehicle.current_mileage }));
+    }
+  }, [formData.vehicle_id, vehicles, hasManualMileage]);
 
   const updateChecklistItem = (index, updatedItem) => {
     const newItems = [...formData.checklist_items];
@@ -89,14 +98,18 @@ export default function InspectionForm({ inspection, vehicles, onSubmit, onCance
       if (item.status === 'observacion') observationCount++;
     });
 
-    let overall_status = 'disponible';
+    let overall_status = 'ok';
     if (criticalCount > 0) {
-      overall_status = 'no_disponible';
+      overall_status = 'mantenimiento';
     } else if (observationCount > 0) {
-      overall_status = 'limitado';
+      overall_status = 'revision';
     }
 
-    const finalInspectionData = { ...formData, overall_status };
+    const finalInspectionData = { 
+      ...formData, 
+      overall_status,
+      vehicle_id: Number(formData.vehicle_id),
+    };
 
     try {
       // 1. Guardar la inspección
@@ -134,7 +147,7 @@ export default function InspectionForm({ inspection, vehicles, onSubmit, onCance
                   </SelectTrigger>
                   <SelectContent>
                     {vehicles.map(vehicle => (
-                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                      <SelectItem key={vehicle.id} value={String(vehicle.id)}>
                         {vehicle.plate} - {vehicle.brand} {vehicle.model}
                       </SelectItem>
                     ))}
@@ -147,7 +160,11 @@ export default function InspectionForm({ inspection, vehicles, onSubmit, onCance
                   id="mileage" 
                   type="number" 
                   value={formData.mileage} 
-                  onChange={e => setFormData({...formData, mileage: parseInt(e.target.value) || 0})} 
+                  onChange={e => {
+                    setHasManualMileage(true);
+                    const value = e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0;
+                    setFormData({...formData, mileage: value});
+                  }} 
                   required
                 />
               </div>

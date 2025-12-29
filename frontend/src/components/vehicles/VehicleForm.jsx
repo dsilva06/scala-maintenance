@@ -50,9 +50,21 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel, existingVehic
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSubmit(formData);
+    if (!validateForm()) {
+      return;
     }
+
+    const normalizeNumber = (value) => (
+      value === '' || Number.isNaN(value) ? null : value
+    );
+
+    const payload = {
+      ...formData,
+      year: normalizeNumber(formData.year),
+      current_mileage: normalizeNumber(formData.current_mileage),
+    };
+
+    onSubmit(payload);
   };
 
   return (
@@ -87,7 +99,12 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel, existingVehic
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="year">Año</Label>
-                <Input id="year" type="number" value={formData.year} onChange={(e) => handleChange('year', parseInt(e.target.value))} />
+                <Input
+                  id="year"
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => handleChange('year', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                />
               </div>
               <div>
                 <Label htmlFor="color">Color</Label>
@@ -95,7 +112,12 @@ export default function VehicleForm({ vehicle, onSubmit, onCancel, existingVehic
               </div>
                <div>
                 <Label htmlFor="current_mileage">Kilometraje Actual</Label>
-                <Input id="current_mileage" type="number" value={formData.current_mileage} onChange={(e) => handleChange('current_mileage', parseInt(e.target.value))} />
+                <Input
+                  id="current_mileage"
+                  type="number"
+                  value={formData.current_mileage}
+                  onChange={(e) => handleChange('current_mileage', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                />
               </div>
             </div>
 

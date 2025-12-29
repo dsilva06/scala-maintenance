@@ -7,6 +7,7 @@ function buildQuery(params = {}) {
   if (params.search) query.set('search', params.search);
   if (params.status && params.status !== 'all') query.set('status', params.status);
   if (params.vehicleId) query.set('vehicle_id', params.vehicleId);
+  if (params.month) query.set('month', params.month);
   if (params.limit) query.set('limit', params.limit);
 
   return query.toString();

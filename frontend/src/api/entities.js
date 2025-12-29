@@ -20,3 +20,5 @@ export const Alert = apiClient.entities.Alert;
 export const Driver = apiClient.entities.Driver;
 
 export const User = apiClient.auth;
+
+export const PurchaseOrder = apiClient.entities.PurchaseOrder;

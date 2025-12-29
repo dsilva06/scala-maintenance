@@ -84,13 +84,26 @@ class SparePartController extends Controller
             $attributes['sku'] = Str::upper(trim($attributes['sku']));
         }
 
-        if (array_key_exists('part_number', $attributes) && $attributes['part_number'] !== null) {
-            $attributes['part_number'] = Str::upper(trim($attributes['part_number']));
+        if (array_key_exists('part_number', $attributes)) {
+            $attributes['part_number'] = $attributes['part_number'] === null || $attributes['part_number'] === ''
+                ? null
+                : Str::upper(trim($attributes['part_number']));
         }
 
         foreach (['name', 'brand', 'category', 'supplier', 'storage_location', 'status'] as $key) {
             if (array_key_exists($key, $attributes) && is_string($attributes[$key])) {
-                $attributes[$key] = trim($attributes[$key]);
+                $value = trim($attributes[$key]);
+                $attributes[$key] = $value === '' ? null : $value;
+            }
+        }
+
+        if (array_key_exists('photo_url', $attributes) && is_string($attributes['photo_url'])) {
+            $attributes['photo_url'] = trim($attributes['photo_url']);
+        }
+
+        foreach (['unit_cost'] as $numeric) {
+            if (array_key_exists($numeric, $attributes) && $attributes[$numeric] === '') {
+                $attributes[$numeric] = null;
             }
         }
 

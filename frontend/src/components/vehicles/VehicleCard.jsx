@@ -13,6 +13,8 @@ import {
 import { format } from "date-fns";
 
 export default function VehicleCard({ vehicle, onEdit, onDelete, getStatusColor, getTypeColor }) {
+  const createdAt = vehicle.created_at || vehicle.created_date;
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 bg-white border border-gray-200">
       <CardContent className="p-6">
@@ -93,7 +95,7 @@ export default function VehicleCard({ vehicle, onEdit, onDelete, getStatusColor,
 
           <div className="pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-500">
-              Registrado: {format(new Date(vehicle.created_date), 'dd/MM/yyyy')}
+              Registrado: {createdAt ? format(new Date(createdAt), 'dd/MM/yyyy') : 'Fecha no disponible'}
             </p>
           </div>
         </div>

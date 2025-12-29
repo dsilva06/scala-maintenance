@@ -6,10 +6,19 @@ async function csrf() {
   });
 }
 
+function getCookie(name) {
+  const value = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(`${name}=`));
+  return value ? value.split('=')[1] : null;
+}
+
 async function request(path, { method = 'GET', body, headers = {}, skipCsrf = false, ...options } = {}) {
   if (!skipCsrf && method !== 'GET' && method !== 'HEAD') {
     await csrf();
   }
+
+  const xsrfToken = getCookie('XSRF-TOKEN');
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
@@ -17,6 +26,7 @@ async function request(path, { method = 'GET', body, headers = {}, skipCsrf = fa
     headers: {
       'Accept': 'application/json',
       ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+      ...(xsrfToken ? { 'X-XSRF-TOKEN': decodeURIComponent(xsrfToken) } : {}),
       ...headers,
     },
     body: body && !(body instanceof FormData) ? JSON.stringify(body) : body,
@@ -49,4 +59,3 @@ export const httpClient = {
   delete: (path, options) => request(path, { ...options, method: 'DELETE' }),
   baseUrl: API_BASE_URL,
 };
-

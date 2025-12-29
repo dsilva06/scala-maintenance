@@ -50,8 +50,8 @@ export default function ChecklistItem({ itemData, index, onUpdate, onRemove }) {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="ok">OK</SelectItem>
-                        <SelectItem value="observacion">Observación</SelectItem>
-                        <SelectItem value="critico">Crítico</SelectItem>
+                        <SelectItem value="observacion">Revisión</SelectItem>
+                        <SelectItem value="critico">Hacer mantenimiento</SelectItem>
                         <SelectItem value="n_a">N/A</SelectItem>
                     </SelectContent>
                 </Select>

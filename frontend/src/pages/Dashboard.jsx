@@ -53,7 +53,7 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       const [vehiclesData, ordersData, inspectionsData, partsData, documentsData] = await Promise.all([
-        Vehicle.list('-created_date', 500), // TODO: replace with real API when module ready
+        Vehicle.list('-created_at', 500),
         listMaintenanceOrders({ sort: '-created_at', limit: 500 }),
         Inspection.list('-inspection_date', 200), // Optimization: Limit data load
         listSpareParts({ sort: '-created_at', limit: 1000 }),
@@ -110,6 +110,12 @@ export default function Dashboard() {
     const outOfService = vehicles.filter(v => v.status === 'fuera_servicio').length;
 
     return { total, active, inMaintenance, outOfService };
+  };
+  
+  const getFleetEfficiency = () => {
+    if (vehicles.length === 0) return 0;
+    const active = vehicles.filter(v => v.status === 'activo').length;
+    return Math.round((active / vehicles.length) * 100);
   };
 
   const getMaintenanceStats = () => {
@@ -174,6 +180,7 @@ export default function Dashboard() {
   const maintenanceStats = useMemo(() => getMaintenanceStats(), [maintenanceOrders]);
   const alerts = useMemo(() => getCriticalAlerts(), [documents, spareParts, maintenanceOrders]);
   const weeklyMaintenance = useMemo(() => getWeeklyMaintenanceFromInspections(), [inspections, vehicles]);
+  const fleetEfficiency = useMemo(() => getFleetEfficiency(), [vehicles]);
 
   const renderWidget = (widget) => {
     // Se elimina la condición if (!widget.visible) return null;
@@ -213,10 +220,10 @@ export default function Dashboard() {
               <Link to={createPageUrl("Dashboard")}>
                 <DashboardStats
                   title="Eficiencia"
-                  value="92%"
+                  value={`${fleetEfficiency}%`}
                   icon={TrendingUp}
                   color="green"
-                  subtitle="Disponibilidad flota"
+                  subtitle={`Disponibilidad flota (${vehicleStats.active}/${vehicleStats.total})`}
                 />
               </Link>
             </div>

@@ -31,11 +31,18 @@ export default function Vehicles() {
     let filtered = vehicles;
 
     if (searchTerm) {
-      filtered = filtered.filter(vehicle => 
-        vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vehicle.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const normalizedSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(vehicle => {
+        const plate = vehicle.plate?.toLowerCase() ?? '';
+        const brand = vehicle.brand?.toLowerCase() ?? '';
+        const model = vehicle.model?.toLowerCase() ?? '';
+
+        return (
+          plate.includes(normalizedSearch) ||
+          brand.includes(normalizedSearch) ||
+          model.includes(normalizedSearch)
+        );
+      });
     }
 
     if (selectedFilter !== "all") {
@@ -50,6 +57,7 @@ export default function Vehicles() {
   }, [vehicles, searchTerm, selectedFilter]);
 
   const loadVehicles = async () => {
+    setIsLoading(true);
     try {
       const data = await listVehicles({ sort: '-created_at' });
       setVehicles(data);

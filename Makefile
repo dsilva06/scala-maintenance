@@ -1,85 +1,65 @@
-# Project-level Makefile helpers for the Laravel backend
+# =====================================================
+# Root Makefile – Single source of truth for the project
+# Backend = Laravel + Sail (./backend)
+# =====================================================
 
 BACKEND_DIR := backend
-UID := $(shell id -u)
-GID := $(shell id -g)
 
-# Containers for tooling (no global PHP/Composer required)
-DOCKER_COMPOSER := docker run --rm -u $(UID):$(GID) -v $(CURDIR)/$(BACKEND_DIR):/app -w /app composer:2
-DOCKER_PHP := docker run --rm -u $(UID):$(GID) -v $(CURDIR)/$(BACKEND_DIR):/app -w /app -p 8000:8000 php:8.3-cli
+.PHONY: help up down restart logs shell artisan migrate seed fresh key ps config-clear
 
-.PHONY: backend-bootstrap backend-serve backend-key backend-artisan backend-composer backend-test backend-clean backend-help
+help:
+	@echo ""
+	@echo "Available commands:"
+	@echo "  make up              Start backend (Sail)"
+	@echo "  make down            Stop backend and remove volumes"
+	@echo "  make restart         Restart backend containers"
+	@echo "  make logs            Tail backend logs"
+	@echo "  make shell           Enter Laravel container shell"
+	@echo "  make artisan cmd=…   Run artisan command"
+	@echo "  make migrate         Run migrations"
+	@echo "  make seed            Run database seeders"
+	@echo "  make fresh           Fresh DB + seed"
+	@echo "  make key             Generate app key"
+	@echo "  make ps              Show Sail containers"
+	@echo "  make config-clear    Clear Laravel config/cache"
+	@echo ""
 
-backend-help:
-	@echo "Backend targets:"
-	@echo "  make backend-bootstrap     # Scaffold Laravel app into ./backend"
-	@echo "  make backend-serve         # Serve app on http://localhost:8000"
-	@echo "  make backend-key           # Generate app key (.env)"
-	@echo "  make backend-artisan cmd=… # Run any artisan command"
-	@echo "  make backend-composer cmd=…# Run any composer command"
-	@echo "  make backend-test          # Run tests"
-	@echo "  make backend-clean         # Remove vendor cache (safe)"
+up:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail up -d
 
-# Create a new Laravel application inside ./backend
-backend-bootstrap:
-	@if [ -f "$(BACKEND_DIR)/artisan" ]; then \
-		echo "Laravel already present in $(BACKEND_DIR). Skipping create-project."; \
-	else \
-		echo "Scaffolding Laravel into $(BACKEND_DIR)…"; \
-		$(DOCKER_COMPOSER) composer create-project laravel/laravel .; \
-		echo "Done. Next: make backend-key && make backend-serve"; \
-	fi
+down:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail down -v
 
-# Serve the application via PHP's built-in server
-backend-serve:
-	@if [ ! -f "$(BACKEND_DIR)/artisan" ]; then \
-		echo "Laravel not found. Run: make backend-bootstrap"; \
-		exit 1; \
-	fi
-	$(DOCKER_PHP) php artisan serve --host=0.0.0.0 --port=8000
+restart:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail restart
 
-# Generate application key
-backend-key:
-	@if [ ! -f "$(BACKEND_DIR)/artisan" ]; then \
-		echo "Laravel not found. Run: make backend-bootstrap"; \
-		exit 1; \
-	fi
-	$(DOCKER_PHP) php artisan key:generate
+ps:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail ps
 
-# Run arbitrary artisan commands: make backend-artisan cmd="migrate --seed"
-backend-artisan:
-	@if [ ! -f "$(BACKEND_DIR)/artisan" ]; then \
-		echo "Laravel not found. Run: make backend-bootstrap"; \
-		exit 1; \
-	fi
+logs:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail logs -f
+
+shell:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail shell
+
+artisan:
 	@if [ -z "$(cmd)" ]; then \
-		echo "Usage: make backend-artisan cmd=\"…\""; \
-		exit 2; \
-	fi
-	$(DOCKER_PHP) php artisan $(cmd)
-
-# Run arbitrary composer commands in ./backend: make backend-composer cmd="require laravel/pint --dev"
-backend-composer:
-	@if [ -z "$(cmd)" ]; then \
-		echo "Usage: make backend-composer cmd=\"…\""; \
-		exit 2; \
-	fi
-	$(DOCKER_COMPOSER) composer $(cmd)
-
-# Run the test suite
-backend-test:
-	@if [ ! -f "$(BACKEND_DIR)/artisan" ]; then \
-		echo "Laravel not found. Run: make backend-bootstrap"; \
+		echo "Usage: make artisan cmd=\"migrate --seed\""; \
 		exit 1; \
 	fi
-	$(DOCKER_PHP) php artisan test --parallel
+	cd $(BACKEND_DIR) && ./vendor/bin/sail artisan $(cmd)
 
-# Clean up vendor cache only (safe to run anytime)
-backend-clean:
-	@if [ -d "$(BACKEND_DIR)/vendor" ]; then \
-		rm -rf "$(BACKEND_DIR)/vendor"; \
-		echo "Removed backend/vendor"; \
-	else \
-		echo "No vendor directory present."; \
-	fi
+migrate:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail artisan migrate
 
+seed:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail artisan db:seed
+
+fresh:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail artisan migrate:fresh --seed
+
+key:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail artisan key:generate
+
+config-clear:
+	cd $(BACKEND_DIR) && ./vendor/bin/sail artisan config:clear && ./vendor/bin/sail artisan cache:clear

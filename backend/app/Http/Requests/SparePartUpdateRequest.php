@@ -14,7 +14,7 @@ class SparePartUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $sparePart = $this->route('sparePart');
+        $sparePart = $this->route('spare_part');
         $userId = $this->user()?->id;
 
         return [

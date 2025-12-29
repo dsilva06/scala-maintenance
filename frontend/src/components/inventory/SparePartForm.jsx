@@ -105,7 +105,8 @@ export default function SparePartForm({ part, onSubmit, onCancel, existingParts 
         ...formData,
         sku: formData.sku.toUpperCase().trim(),
         name: formData.name.trim(),
-        part_number: formData.part_number?.trim() || "",
+        part_number: formData.part_number?.trim() || null,
+        photo_url: formData.photo_url || null,
       };
       onSubmit(dataToSubmit);
     } else {

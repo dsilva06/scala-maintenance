@@ -88,6 +88,14 @@ export default function Login() {
               </p>
             </div>
 
+            <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-sm text-white/80 shadow-[0_10px_30px_-18px_rgba(148,163,255,0.45)] md:text-base">
+              <p className="font-semibold text-white">Acceso de prueba inmediato</p>
+              <p className="mt-1">
+                Usa <span className="font-mono text-white">test@alca.com</span> con la contraseña{' '}
+                <span className="font-mono text-white">ALCA123</span> para entrar al tablero.
+              </p>
+            </div>
+
             {errors.general && (
               <div className="mt-6 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-4 text-sm text-red-100 md:text-base">
                 {errors.general.join(' ')}

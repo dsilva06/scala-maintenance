@@ -220,7 +220,7 @@ const faultServiceMapping = {
 export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCancel, existingOrders }) {
   const [type, setType] = useState(order?.type || "correctivo");
   const [formData, setFormData] = useState({
-    vehicle_id: order?.vehicle_id || "",
+    vehicle_id: order?.vehicle_id ? String(order.vehicle_id) : "",
     order_number: order?.order_number || `MNT-${Date.now()}`,
     type: order?.type || "correctivo",
     priority: order?.priority || "media",
@@ -286,7 +286,8 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
     if (validateForm()) {
       const finalData = {
         ...formData,
-        description: formData.fault_description
+        description: formData.fault_description,
+        vehicle_id: Number(formData.vehicle_id),
       };
       onSubmit(finalData);
     }
@@ -321,7 +322,11 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
                 <Select value={formData.vehicle_id} onValueChange={(value) => handleChange('vehicle_id', value)}>
                   <SelectTrigger><SelectValue placeholder="Seleccionar vehículo" /></SelectTrigger>
                   <SelectContent>
-                    {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.plate} - {v.brand} {v.model}</SelectItem>)}
+                    {vehicles.map(v => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.plate} - {v.brand} {v.model}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -9,11 +9,25 @@ export default function InspectionCard({ inspection, vehicle, onEdit, onDelete }
   const getStatusInfo = (status) => {
     switch (status) {
       case 'disponible':
-        return { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, label: 'Disponible' };
+        status = 'ok';
+        break;
       case 'limitado':
-        return { color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertTriangle, label: 'Limitado' };
+        status = 'revision';
+        break;
       case 'no_disponible':
-        return { color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle, label: 'No Disponible' };
+        status = 'mantenimiento';
+        break;
+      default:
+        break;
+    }
+
+    switch (status) {
+      case 'ok':
+        return { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, label: 'OK' };
+      case 'revision':
+        return { color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertTriangle, label: 'Revisión' };
+      case 'mantenimiento':
+        return { color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle, label: 'Hacer mantenimiento' };
       default:
         return { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: AlertTriangle, label: 'Desconocido' };
     }
