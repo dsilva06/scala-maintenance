@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Services\Mcp\Tools;
+
+use App\Models\PurchaseOrder;
+use App\Models\User;
+use App\Services\Mcp\Contracts\ToolInterface;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+
+class CreatePurchaseOrderTool implements ToolInterface
+{
+    public function getName(): string
+    {
+        return 'create_purchase_order';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Crea una orden de compra con proveedor y numero de orden.';
+    }
+
+    public function getInputSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['order_number', 'supplier'],
+            'properties' => [
+                'order_number' => ['type' => 'string'],
+                'supplier' => ['type' => 'string'],
+                'product_name' => ['type' => 'string'],
+                'status' => ['type' => 'string'],
+                'priority' => ['type' => 'string'],
+                'total_cost' => ['type' => 'number'],
+                'items_count' => ['type' => 'integer'],
+                'expected_date' => ['type' => 'string', 'format' => 'date'],
+                'notes' => ['type' => 'string'],
+            ],
+        ];
+    }
+
+    public function validateArguments(array $arguments, User $user): array
+    {
+        $validator = Validator::make($arguments, [
+            'order_number' => [
+                'required',
+                'string',
+                'max:120',
+                Rule::unique('purchase_orders', 'order_number')->where('user_id', $user->id),
+            ],
+            'supplier' => ['required', 'string', 'max:150'],
+            'product_name' => ['nullable', 'string', 'max:150'],
+            'status' => ['nullable', 'string', 'max:50'],
+            'priority' => ['nullable', 'string', 'max:50'],
+            'total_cost' => ['nullable', 'numeric', 'min:0'],
+            'items_count' => ['nullable', 'integer', 'min:0'],
+            'expected_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $validated = $validator->validate();
+
+        foreach (['order_number', 'supplier', 'product_name', 'status', 'priority', 'notes'] as $key) {
+            if (array_key_exists($key, $validated) && is_string($validated[$key])) {
+                $validated[$key] = trim($validated[$key]);
+            }
+        }
+
+        $validated['order_number'] = strtoupper($validated['order_number']);
+
+        return $validated;
+    }
+
+    public function invoke(array $arguments, User $user): array
+    {
+        $validated = $this->validateArguments($arguments, $user);
+
+        $order = $user->purchaseOrders()->create($validated);
+
+        return [
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'supplier' => $order->supplier,
+            'status' => $order->status,
+            'priority' => $order->priority,
+            'total_cost' => $order->total_cost,
+            'expected_date' => optional($order->expected_date)->toIso8601String(),
+        ];
+    }
+}

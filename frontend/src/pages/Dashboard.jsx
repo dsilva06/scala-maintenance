@@ -24,6 +24,7 @@ import VehicleStatusCard from "../components/dashboard/VehicleStatusCard";
 import AlertsPanel from "../components/dashboard/AlertsPanel";
 import AIInsights from "../components/dashboard/AIInsights";
 import SmartFlowWidget from "../components/dashboard/SmartFlowWidget"; // New component for Smart Flow
+import AIAssistantPanel from "../components/ai/AIAssistantPanel";
 
 // Configuración de widgets por defecto
 const defaultWidgets = [
@@ -32,6 +33,7 @@ const defaultWidgets = [
   { id: 'alerts', name: 'Alertas' },
   { id: 'maintenance-calendar', name: 'Próximos Mantenimientos' },
   { id: 'ai-insights', name: 'FLOTA AI Insights' },
+  { id: 'ai-assistant', name: 'FLOTA AI Asistente' },
   { id: 'smart-flow', name: 'Guías y Flujo de Órdenes Inteligente' }, // New Widget
 ];
 
@@ -303,6 +305,21 @@ export default function Dashboard() {
             <AlertsPanel
               alerts={alerts}
             />
+          );
+
+        case 'ai-assistant':
+          return (
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-indigo-600" />
+                  Asistente IA (scaffold)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AIAssistantPanel />
+              </CardContent>
+            </Card>
           );
 
         case 'smart-flow': // New case for Smart Flow Widget

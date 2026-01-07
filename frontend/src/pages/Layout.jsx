@@ -13,7 +13,8 @@ import {
   Search,
   Map,
   BookOpen,
-  ShoppingCart
+  ShoppingCart,
+  Bot
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -75,6 +76,12 @@ const navigationItems = [
     title: "Inspecciones",
     url: "/app/inspections",
     icon: ClipboardCheck,
+    roles: ADMIN_EMPLOYEE,
+  },
+  {
+    title: "Asistente AI",
+    url: "/app/ai",
+    icon: Bot,
     roles: ADMIN_EMPLOYEE,
   },
   {

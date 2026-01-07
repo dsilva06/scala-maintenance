@@ -11,6 +11,7 @@ import Trips from './Trips';
 import Guides from './Guides';
 import MaintenanceGuides from './MaintenanceGuides';
 import Purchases from './Purchases';
+import AIAssistant from './AIAssistant';
 import AccessDenied from './AccessDenied.jsx';
 import Landing from './Landing.jsx';
 import Login from './Login.jsx';
@@ -34,6 +35,7 @@ export default function Pages() {
               <Route path="trips" element={<Trips />} />
               <Route path="guides" element={<Guides />} />
               <Route path="maintenance-guides" element={<MaintenanceGuides />} />
+              <Route path="ai" element={<AIAssistant />} />
             </Route>
             <Route element={<ProtectedRoute allowedRoles={['admin']} redirectTo="/app/access-denied" />}>
               <Route path="inventory" element={<Inventory />} />

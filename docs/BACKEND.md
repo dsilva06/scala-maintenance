@@ -53,6 +53,7 @@ php artisan serve --host=127.0.0.1 --port=8000
   `php artisan queue:table` and `php artisan session:table` followed by
   `php artisan migrate` if you plan to use queues/sessions right away.
 
+
 ## Project structure
 
 ```
@@ -77,6 +78,16 @@ backend/
   - Docker: `make backend-composer cmd="require laravel/pint --dev"`
   - Native: `composer require laravel/pint --dev`
 - Run the Pest test suite (`php artisan test`) instead of PHPUnit.
+
+## AI agent scaffold
+
+- Endpoints (auth required):
+  - `POST /api/ai/conversations` crea una conversación (opcional `title`).
+  - `GET /api/ai/conversations` lista las últimas conversaciones (dueño actual).
+  - `GET /api/ai/conversations/{id}` devuelve la conversación con sus mensajes recientes.
+  - `POST /api/ai/conversations/{id}/messages` envía un mensaje (`message` requerido, `context` opcional) y devuelve un borrador (stub) más el mensaje del usuario.
+- Configuration placeholders live in `config/services.php` under `ai_agent` with env vars `AI_AGENT_PROVIDER`, `AI_AGENT_API_KEY`, `AI_AGENT_BASE_URL`, `AI_AGENT_MODEL`, `AI_AGENT_TIMEOUT`.
+- Planes seeded (DatabaseSeeder): `free` (gpt-4.1-mini, 50 mensajes/mes), `pro` (gpt-4.1, 500 mensajes/mes), `enterprise` (gpt-4.1, 5000 mensajes/mes). Al enviar mensajes se crea una suscripción Free por defecto y se valida el límite mensual por usuario.
 
 ## Troubleshooting
 
