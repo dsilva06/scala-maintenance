@@ -8,10 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Plus, Search, Filter, Package, AlertTriangle, CheckCircle, Clock, Edit, Trash2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { PurchaseOrder } from "@/api/entities";
+import { PurchaseOrder, SparePart, Supplier } from "@/api/entities";
 
 export default function Purchases() {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [spareParts, setSpareParts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState(() => {
@@ -20,11 +22,20 @@ export default function Purchases() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showSupplierForm, setShowSupplierForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [supplierDraft, setSupplierDraft] = useState({
+    name: "",
+    contact_name: "",
+    phone: "",
+    email: "",
+  });
   const [formData, setFormData] = useState({
     order_number: "",
     supplier: "",
+    supplier_id: "",
     product_name: "",
+    spare_part_id: "",
     status: "draft",
     priority: "media",
     total_cost: 0,
@@ -37,6 +48,10 @@ export default function Purchases() {
     loadPurchaseOrders();
   }, [monthFilter]);
 
+  useEffect(() => {
+    loadReferenceData();
+  }, []);
+
   const loadPurchaseOrders = async () => {
     setIsLoading(true);
     try {
@@ -47,6 +62,20 @@ export default function Purchases() {
       toast.error("Error al cargar las órdenes de compra");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadReferenceData = async () => {
+    try {
+      const [suppliersData, sparePartsData] = await Promise.all([
+        Supplier.list({ sort: 'name' }),
+        SparePart.list({ sort: 'name', limit: 500 }),
+      ]);
+      setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
+      setSpareParts(Array.isArray(sparePartsData) ? sparePartsData : []);
+    } catch (error) {
+      console.error("Error loading suppliers or spare parts:", error);
+      toast.error("Error al cargar proveedores o repuestos.");
     }
   };
 
@@ -70,17 +99,25 @@ export default function Purchases() {
   };
 
   const filteredOrders = useMemo(() => purchaseOrders.filter(order => {
-    const searchMatch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       order.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+    const orderNumber = order.order_number || "";
+    const supplierName = order.supplier || "";
+    const searchMatch = orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       supplierName.toLowerCase().includes(searchTerm.toLowerCase());
     const statusMatch = statusFilter === "all" || order.status === statusFilter;
     return searchMatch && statusMatch;
   }), [purchaseOrders, searchTerm, statusFilter]);
+
+  const sparePartMap = useMemo(() => {
+    return new Map(spareParts.map((part) => [part.id, part]));
+  }, [spareParts]);
 
   const resetForm = () => {
     setFormData({
       order_number: "",
       supplier: "",
+      supplier_id: "",
       product_name: "",
+      spare_part_id: "",
       status: "draft",
       priority: "media",
       total_cost: 0,
@@ -88,6 +125,13 @@ export default function Purchases() {
       expected_date: "",
       notes: "",
     });
+    setSupplierDraft({
+      name: "",
+      contact_name: "",
+      phone: "",
+      email: "",
+    });
+    setShowSupplierForm(false);
     setEditingOrder(null);
   };
 
@@ -96,7 +140,9 @@ export default function Purchases() {
       setFormData({
         order_number: order.order_number || "",
         supplier: order.supplier || "",
+        supplier_id: order.supplier_id ? String(order.supplier_id) : "",
         product_name: order.product_name || "",
+        spare_part_id: order.spare_part_id ? String(order.spare_part_id) : "",
         status: order.status || "draft",
         priority: order.priority || "media",
         total_cost: Number(order.total_cost ?? 0),
@@ -114,24 +160,39 @@ export default function Purchases() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        supplier_id: formData.supplier_id ? Number(formData.supplier_id) : null,
+        spare_part_id: formData.spare_part_id ? Number(formData.spare_part_id) : null,
+        total_cost: Number(formData.total_cost ?? 0),
+        items_count: Number(formData.items_count ?? 0),
+      };
+
+      if (payload.supplier_id && !payload.supplier) {
+        const matchedSupplier = suppliers.find((supplier) => supplier.id === payload.supplier_id);
+        if (matchedSupplier) {
+          payload.supplier = matchedSupplier.name;
+        }
+      }
+
       if (editingOrder) {
-        await PurchaseOrder.update(editingOrder.id, formData);
+        await PurchaseOrder.update(editingOrder.id, payload);
         toast.success("Orden de compra actualizada.");
       } else {
         const autoNumber = formData.order_number || `OC-${new Date().getFullYear()}-${String(purchaseOrders.length + 1).padStart(3, '0')}`;
         const existing = purchaseOrders.find(
-          (po) => po.order_number === autoNumber && po.supplier.toLowerCase() === formData.supplier.toLowerCase()
+          (po) => po.order_number === autoNumber && (po.supplier || '').toLowerCase() === (payload.supplier || '').toLowerCase()
         );
 
         if (existing) {
           await PurchaseOrder.update(existing.id, {
             total_cost: Number(existing.total_cost ?? 0) + Number(formData.total_cost ?? 0),
             items_count: Number(existing.items_count ?? 0) + Number(formData.items_count ?? 1),
-            product_name: existing.product_name || formData.product_name,
+            product_name: existing.product_name || payload.product_name,
           });
           toast.success("Ítem agregado a la orden existente.");
         } else {
-          await PurchaseOrder.create({ ...formData, order_number: autoNumber });
+          await PurchaseOrder.create({ ...payload, order_number: autoNumber });
           toast.success("Orden de compra creada.");
         }
       }
@@ -156,6 +217,50 @@ export default function Purchases() {
       toast.error("No se pudo eliminar la orden.");
     }
   };
+
+  const handleCreateSupplier = async () => {
+    if (!supplierDraft.name.trim()) {
+      toast.warning("Ingresa un nombre de proveedor.");
+      return;
+    }
+    try {
+      const created = await Supplier.create({
+        name: supplierDraft.name.trim(),
+        contact_name: supplierDraft.contact_name.trim() || null,
+        phone: supplierDraft.phone.trim() || null,
+        email: supplierDraft.email.trim() || null,
+      });
+      const nextSuppliers = Array.isArray(suppliers) ? [...suppliers, created] : [created];
+      setSuppliers(nextSuppliers);
+      setFormData((prev) => ({
+        ...prev,
+        supplier_id: String(created.id),
+        supplier: created.name,
+      }));
+      setSupplierDraft({ name: "", contact_name: "", phone: "", email: "" });
+      setShowSupplierForm(false);
+      toast.success("Proveedor agregado.");
+    } catch (error) {
+      console.error("Error creating supplier:", error);
+      const message = error.data?.message || "No se pudo crear el proveedor.";
+      toast.error(message);
+    }
+  };
+
+  const handleSupplierSelect = (value) => {
+    if (value === "manual") {
+      setFormData((prev) => ({ ...prev, supplier_id: "", supplier: "" }));
+      return;
+    }
+    const matchedSupplier = suppliers.find((supplier) => String(supplier.id) === value);
+    setFormData((prev) => ({
+      ...prev,
+      supplier_id: value,
+      supplier: matchedSupplier?.name || prev.supplier,
+    }));
+  };
+
+  const supplierSelectValue = formData.supplier_id ? String(formData.supplier_id) : "manual";
 
   if (isLoading) {
     return (
@@ -300,6 +405,14 @@ export default function Purchases() {
                             {order.product_name || 'N/A'}
                           </p>
                         </div>
+                        {order.spare_part_id && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500">Repuesto</span>
+                            <p className="font-medium text-gray-800">
+                              {sparePartMap.get(order.spare_part_id)?.name || `#${order.spare_part_id}`}
+                            </p>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex items-center justify-between">

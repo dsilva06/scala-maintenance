@@ -59,6 +59,7 @@ class MaintenanceOrderController extends Controller
 
         if ($order->vehicle_id) {
             $this->refreshVehicleStatus($order->vehicle_id, $user->id);
+            $this->syncVehicleMileageFromOrder($order, $validated);
         }
 
         return JsonResource::make($order->load('vehicle'))->response()->setStatusCode(201);
@@ -85,6 +86,7 @@ class MaintenanceOrderController extends Controller
 
         if ($maintenanceOrder->vehicle_id) {
             $this->refreshVehicleStatus($maintenanceOrder->vehicle_id, $request->user()->id);
+            $this->syncVehicleMileageFromOrder($maintenanceOrder, $validated);
         }
 
         return JsonResource::make($maintenanceOrder->load('vehicle'));
@@ -154,5 +156,37 @@ class MaintenanceOrderController extends Controller
         Vehicle::where('id', $vehicleId)
             ->where('user_id', $userId)
             ->update(['status' => $newStatus]);
+    }
+
+    protected function syncVehicleMileageFromOrder(MaintenanceOrder $order, array $attributes): void
+    {
+        if ($order->status !== 'completada') {
+            return;
+        }
+
+        $completionMileage = $attributes['completion_mileage'] ?? null;
+
+        if ($completionMileage === null) {
+            return;
+        }
+
+        $vehicle = Vehicle::where('id', $order->vehicle_id)
+            ->where('user_id', $order->user_id)
+            ->first();
+
+        if (! $vehicle) {
+            return;
+        }
+
+        $currentMileage = (int) ($vehicle->current_mileage ?? 0);
+        $newMileage = max($currentMileage, (int) $completionMileage);
+
+        $updates = ['current_mileage' => $newMileage];
+
+        if ($order->completion_date) {
+            $updates['last_service_date'] = $order->completion_date->toDateString();
+        }
+
+        $vehicle->update($updates);
     }
 }

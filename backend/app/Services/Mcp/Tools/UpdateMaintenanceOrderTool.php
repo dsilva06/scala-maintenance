@@ -33,14 +33,15 @@ class UpdateMaintenanceOrderTool implements ToolInterface
                 'priority' => ['type' => 'string'],
                 'scheduled_date' => ['type' => 'string', 'format' => 'date-time'],
                 'completion_date' => ['type' => 'string', 'format' => 'date-time'],
+                'completion_mileage' => ['type' => 'integer'],
                 'estimated_cost' => ['type' => 'number'],
                 'actual_cost' => ['type' => 'number'],
                 'title' => ['type' => 'string'],
                 'description' => ['type' => 'string'],
                 'mechanic' => ['type' => 'string'],
                 'notes' => ['type' => 'string'],
-                'tasks' => ['type' => 'array'],
-                'parts' => ['type' => 'array'],
+                'tasks' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'parts' => ['type' => 'array', 'items' => ['type' => 'object']],
             ],
         ];
     }
@@ -54,6 +55,7 @@ class UpdateMaintenanceOrderTool implements ToolInterface
             'priority' => ['nullable', 'string', 'max:50'],
             'scheduled_date' => ['nullable', 'date'],
             'completion_date' => ['nullable', 'date'],
+            'completion_mileage' => ['nullable', 'integer', 'min:0'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'actual_cost' => ['nullable', 'numeric', 'min:0'],
             'title' => ['nullable', 'string', 'max:150'],
@@ -71,7 +73,7 @@ class UpdateMaintenanceOrderTool implements ToolInterface
 
             $updateFields = [
                 'status', 'priority', 'scheduled_date', 'completion_date',
-                'estimated_cost', 'actual_cost', 'title', 'description',
+                'completion_mileage', 'estimated_cost', 'actual_cost', 'title', 'description',
                 'mechanic', 'notes', 'tasks', 'parts',
             ];
 

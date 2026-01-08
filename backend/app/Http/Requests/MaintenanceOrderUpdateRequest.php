@@ -35,6 +35,7 @@ class MaintenanceOrderUpdateRequest extends FormRequest
             'mechanic' => ['sometimes', 'nullable', 'string', 'max:120'],
             'scheduled_date' => ['sometimes', 'nullable', 'date'],
             'completion_date' => ['sometimes', 'nullable', 'date'],
+            'completion_mileage' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'estimated_cost' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'actual_cost' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'notes' => ['sometimes', 'nullable', 'string'],

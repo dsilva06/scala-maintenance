@@ -38,10 +38,11 @@ class CreateMaintenanceOrderTool implements ToolInterface
                 'description' => ['type' => 'string'],
                 'mechanic' => ['type' => 'string'],
                 'scheduled_date' => ['type' => 'string', 'format' => 'date-time'],
+                'completion_mileage' => ['type' => 'integer'],
                 'estimated_cost' => ['type' => 'number'],
                 'notes' => ['type' => 'string'],
-                'tasks' => ['type' => 'array'],
-                'parts' => ['type' => 'array'],
+                'tasks' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'parts' => ['type' => 'array', 'items' => ['type' => 'object']],
             ],
         ];
     }
@@ -64,6 +65,7 @@ class CreateMaintenanceOrderTool implements ToolInterface
             'description' => ['nullable', 'string'],
             'mechanic' => ['nullable', 'string', 'max:120'],
             'scheduled_date' => ['nullable', 'date'],
+            'completion_mileage' => ['nullable', 'integer', 'min:0'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'tasks' => ['nullable', 'array'],

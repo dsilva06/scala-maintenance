@@ -6,6 +6,8 @@ use App\Http\Controllers\Concerns\HandlesQueryOptions;
 use App\Http\Requests\PurchaseOrderStoreRequest;
 use App\Http\Requests\PurchaseOrderUpdateRequest;
 use App\Models\PurchaseOrder;
+use App\Models\SparePart;
+use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -49,7 +51,11 @@ class PurchaseOrderController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        $order = $user->purchaseOrders()->create($this->normalize($validated));
+        $payload = $this->normalize($validated);
+        $payload = $this->applySupplierName($payload, $user->id);
+
+        $order = $user->purchaseOrders()->create($payload);
+        $this->applyInventoryReceipt($order, null);
 
         return JsonResource::make($order)->response()->setStatusCode(201);
     }
@@ -67,7 +73,12 @@ class PurchaseOrderController extends Controller
 
         $validated = $request->validated();
 
-        $purchaseOrder->update($this->normalize($validated));
+        $previousStatus = $purchaseOrder->status;
+        $updates = $this->normalize($validated);
+        $updates = $this->applySupplierName($updates, $request->user()->id);
+
+        $purchaseOrder->update($updates);
+        $this->applyInventoryReceipt($purchaseOrder, $previousStatus);
 
         return JsonResource::make($purchaseOrder);
     }
@@ -101,5 +112,55 @@ class PurchaseOrderController extends Controller
         }
 
         return $attributes;
+    }
+
+    protected function applySupplierName(array $attributes, int $userId): array
+    {
+        if (!empty($attributes['supplier_id']) && empty($attributes['supplier'])) {
+            $supplierName = Supplier::where('id', $attributes['supplier_id'])
+                ->where('user_id', $userId)
+                ->value('name');
+
+            if ($supplierName) {
+                $attributes['supplier'] = $supplierName;
+            }
+        }
+
+        return $attributes;
+    }
+
+    protected function applyInventoryReceipt(PurchaseOrder $order, ?string $previousStatus): void
+    {
+        if ($order->status !== 'received') {
+            return;
+        }
+
+        if ($previousStatus === 'received' || $order->received_at) {
+            return;
+        }
+
+        if (! $order->spare_part_id) {
+            $order->forceFill(['received_at' => now()])->save();
+            return;
+        }
+
+        $quantity = max(0, (int) $order->items_count);
+
+        if ($quantity <= 0) {
+            $order->forceFill(['received_at' => now()])->save();
+            return;
+        }
+
+        $part = SparePart::query()
+            ->where('id', $order->spare_part_id)
+            ->where('user_id', $order->user_id)
+            ->first();
+
+        if (! $part) {
+            return;
+        }
+
+        $part->increment('current_stock', $quantity);
+        $order->forceFill(['received_at' => now()])->save();
     }
 }

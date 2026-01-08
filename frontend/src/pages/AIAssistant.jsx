@@ -10,7 +10,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Bot,
@@ -187,30 +186,47 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Asistente AI</h1>
-          <p className="text-sm text-gray-500">
-            Chat tipo GPT con enfoque en tu operación de mantenimiento. Aprende del contexto y genera borradores.
-          </p>
+    <div className="relative mx-auto max-w-[1600px] space-y-8 px-4 py-8 sm:px-6 lg:px-10 2xl:px-16 2xl:py-12">
+      <div className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-indigo-50/60 p-6 shadow-[0_35px_80px_-60px_rgba(15,23,42,0.45)] sm:p-8 lg:p-10">
+        <div className="absolute -top-20 right-[-60px] h-56 w-56 rounded-full bg-blue-200/55 blur-3xl" />
+        <div className="absolute bottom-[-140px] left-[-100px] h-72 w-72 rounded-full bg-indigo-200/40 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-4">
+            <span className="inline-flex w-fit items-center rounded-full border border-indigo-200/70 bg-white/70 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-700">
+              FLOTA AI
+            </span>
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold leading-tight text-gray-900 sm:text-4xl lg:text-5xl 2xl:text-6xl">
+                Asistente AI
+              </h1>
+              <p className="max-w-2xl text-sm text-gray-600 sm:text-base lg:text-lg 2xl:text-xl">
+                Un copiloto operativo para mantenimiento, inventario y costos. Mantiene memoria, consulta tus datos y
+                propone acciones seguras bajo tus reglas.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant="outline" className="gap-2 border-indigo-200/80 bg-white/80 px-3 py-1 text-xs text-indigo-700">
+              <Sparkles className="h-3 w-3" />
+              Borrador (stub)
+            </Badge>
+            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-xs text-gray-600 shadow-[0_12px_28px_-22px_rgba(15,23,42,0.45)] sm:text-sm">
+              Contexto vivo + acciones con confirmacion.
+            </div>
+          </div>
         </div>
-        <Badge variant="outline" className="gap-1">
-          <Sparkles className="w-3 h-3" />
-          Borrador (stub)
-        </Badge>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <Card className="lg:col-span-3 h-full">
-          <CardHeader className="border-b">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bot className="w-4 h-4 text-indigo-600" />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3.1fr)_minmax(0,1.2fr)] 2xl:gap-8">
+        <Card className="h-full overflow-hidden border-slate-200/80 bg-white/90 shadow-[0_30px_70px_-55px_rgba(15,23,42,0.5)]">
+          <CardHeader className="border-b border-slate-200/80 bg-white/80 px-6 py-5">
+            <CardTitle className="flex items-center gap-2 text-base text-gray-900 lg:text-lg">
+              <Bot className="h-5 w-5 text-indigo-600" />
               Chat
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="h-[480px] overflow-y-auto px-6 py-4 space-y-4">
+            <div className="h-[520px] overflow-y-auto px-6 py-6 space-y-5 sm:h-[560px] lg:h-[620px] 2xl:h-[720px]">
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
@@ -224,7 +240,7 @@ export default function AIAssistant() {
                     {msg.role === "assistant" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
                   </div>
                   <div
-                    className={`rounded-2xl px-4 py-3 text-sm max-w-3xl whitespace-pre-wrap ${
+                    className={`rounded-2xl px-4 py-3 text-[13px] max-w-3xl whitespace-pre-wrap sm:text-sm lg:text-base ${
                       msg.role === "assistant"
                         ? "bg-indigo-50 text-gray-900 border border-indigo-100"
                         : "bg-white text-gray-900 border border-gray-200 shadow-sm"
@@ -232,7 +248,7 @@ export default function AIAssistant() {
                   >
                 {msg.content}
                 {msg.meta && (
-                  <div className="mt-2 text-[11px] text-gray-500 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-500">
                     {msg.meta.provider && <span>Proveedor: {msg.meta.provider}</span>}
                     {msg.meta.model && <span>Modelo: {msg.meta.model}</span>}
                     {msg.meta.status && <Badge variant="outline">{msg.meta.status}</Badge>}
@@ -249,19 +265,24 @@ export default function AIAssistant() {
               )}
               {error && <p className="text-sm text-red-600">{error}</p>}
             </div>
-            <form onSubmit={handleSubmit} className="border-t p-4 space-y-3 bg-gray-50">
+            <form onSubmit={handleSubmit} className="border-t border-slate-200/80 bg-slate-50/70 p-5 space-y-4">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Pregúntame sobre tu negocio..."
-                className="min-h-[100px]"
+                className="min-h-[120px] text-sm lg:min-h-[140px] lg:text-base"
               />
               <div className="flex items-center gap-3">
-                <Button type="submit" disabled={loading || !input.trim()}>
+                <Button type="submit" disabled={loading || !input.trim()} className="px-5 py-2.5 text-sm lg:text-base">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                   Enviar
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setMessages(messages.slice(0, 1))}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMessages(messages.slice(0, 1))}
+                  className="px-5 py-2.5 text-sm lg:text-base"
+                >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Reiniciar chat
                 </Button>
@@ -270,24 +291,24 @@ export default function AIAssistant() {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <Card>
+        <div className="space-y-6">
+          <Card className="border-slate-200/80 bg-white/90 shadow-[0_25px_60px_-50px_rgba(15,23,42,0.45)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-indigo-600" />
+              <CardTitle className="flex items-center gap-2 text-base text-gray-900 lg:text-lg">
+                <BarChart3 className="w-5 h-5 text-indigo-600" />
                 Contexto del negocio
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-gray-700">
+            <CardContent className="space-y-4 text-sm text-gray-700 lg:text-base">
               <p className="text-gray-600 whitespace-pre-line">{statsSummary}</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-lg">
+              <div className="grid grid-cols-2 gap-3 text-xs lg:text-sm">
+                <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
                   <p className="text-indigo-700 font-semibold">Flota</p>
                   <p className="text-gray-700">
                     {vehicleTotal !== undefined ? `${vehicleTotal} vehículos` : "Sin datos"}
                   </p>
                 </div>
-                <div className="p-2 bg-orange-50 border border-orange-100 rounded-lg">
+                <div className="p-3 bg-orange-50 border border-orange-100 rounded-xl">
                   <p className="text-orange-700 font-semibold">Repuestos críticos</p>
                   <p className="text-gray-700">
                     {criticalParts !== undefined ? `${criticalParts} items` : "Sin datos"}
@@ -297,17 +318,17 @@ export default function AIAssistant() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-slate-200/80 bg-white/90 shadow-[0_25px_60px_-50px_rgba(15,23,42,0.45)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-indigo-600" />
+              <CardTitle className="flex items-center gap-2 text-base text-gray-900 lg:text-lg">
+                <TrendingUp className="w-5 h-5 text-indigo-600" />
                 Acciones pendientes
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-xs text-gray-700">
+            <CardContent className="space-y-3 text-xs text-gray-700 lg:text-sm">
               {actions.length === 0 && <p className="text-gray-500">Sin acciones pendientes.</p>}
               {actions.map((action) => (
-                <div key={action.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                <div key={action.id} className="border border-gray-200 rounded-xl p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-gray-800">{action.tool}</p>
                     <Badge variant="outline">{action.status}</Badge>
@@ -345,20 +366,20 @@ export default function AIAssistant() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-slate-200/80 bg-white/90 shadow-[0_25px_60px_-50px_rgba(15,23,42,0.45)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+              <CardTitle className="flex items-center gap-2 text-base text-gray-900 lg:text-lg">
+                <Sparkles className="w-5 h-5 text-indigo-600" />
                 Sugerencias rápidas
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               {starterPrompts.map((prompt) => (
                 <Button
                   key={prompt}
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-left text-xs"
+                  className="w-full justify-start text-left text-xs lg:text-sm"
                   onClick={() => sendMessage(prompt)}
                   disabled={loading}
                 >

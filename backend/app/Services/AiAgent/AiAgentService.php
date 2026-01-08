@@ -4,6 +4,7 @@ namespace App\Services\AiAgent;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class AiAgentService
 {
@@ -43,13 +44,24 @@ class AiAgentService
             $payload['tool_choice'] = 'auto';
         }
 
-        $response = Http::withToken($apiKey)
-            ->baseUrl($baseUrl)
-            ->acceptJson()
-            ->timeout($timeout)
-            ->post('/chat/completions', $payload);
+        try {
+            $response = Http::withToken($apiKey)
+                ->baseUrl($baseUrl)
+                ->acceptJson()
+                ->timeout($timeout)
+                ->post('/chat/completions', $payload);
+        } catch (\Throwable $exception) {
+            Log::warning('AI agent request failed', [
+                'error' => $exception->getMessage(),
+            ]);
+            abort(502, 'No se pudo obtener respuesta del proveedor AI.');
+        }
 
         if ($response->failed()) {
+            Log::warning('AI agent response failed', [
+                'status' => $response->status(),
+                'body' => $response->json() ?? $response->body(),
+            ]);
             abort(502, 'No se pudo obtener respuesta del proveedor AI.');
         }
 
@@ -96,6 +108,7 @@ class AiAgentService
                 'Si el usuario pide ejecutar una tarea y tienes datos completos, usa una herramienta.',
                 'Todas las acciones requieren confirmacion humana antes de ejecutarse.',
                 'Si faltan datos para una herramienta, pide la informacion faltante.',
+                'Para registrar un vehiculo necesitas placa, marca y modelo (plate, brand, model).',
             ]),
         ];
 

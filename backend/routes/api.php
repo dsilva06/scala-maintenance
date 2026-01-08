@@ -13,6 +13,7 @@ use App\Http\Controllers\MaintenanceOrderController;
 use App\Http\Controllers\McpController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SparePartController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -56,4 +57,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('spare-parts', SparePartController::class);
     Route::apiResource('inspections', InspectionController::class);
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    Route::apiResource('suppliers', SupplierController::class);
 });

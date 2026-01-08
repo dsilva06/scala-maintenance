@@ -32,6 +32,7 @@ class MaintenanceOrderStoreRequest extends FormRequest
             'mechanic' => ['nullable', 'string', 'max:120'],
             'scheduled_date' => ['nullable', 'date'],
             'completion_date' => ['nullable', 'date'],
+            'completion_mileage' => ['nullable', 'integer', 'min:0'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'actual_cost' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],

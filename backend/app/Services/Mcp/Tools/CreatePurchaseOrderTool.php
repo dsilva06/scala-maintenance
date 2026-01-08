@@ -3,6 +3,7 @@
 namespace App\Services\Mcp\Tools;
 
 use App\Models\PurchaseOrder;
+use App\Models\Supplier;
 use App\Models\User;
 use App\Services\Mcp\Contracts\ToolInterface;
 use Illuminate\Support\Facades\Validator;
@@ -24,16 +25,18 @@ class CreatePurchaseOrderTool implements ToolInterface
     {
         return [
             'type' => 'object',
-            'required' => ['order_number', 'supplier'],
+            'required' => ['order_number'],
             'properties' => [
                 'order_number' => ['type' => 'string'],
                 'supplier' => ['type' => 'string'],
+                'supplier_id' => ['type' => 'integer'],
                 'product_name' => ['type' => 'string'],
                 'status' => ['type' => 'string'],
                 'priority' => ['type' => 'string'],
                 'total_cost' => ['type' => 'number'],
                 'items_count' => ['type' => 'integer'],
                 'expected_date' => ['type' => 'string', 'format' => 'date'],
+                'spare_part_id' => ['type' => 'integer'],
                 'notes' => ['type' => 'string'],
             ],
         ];
@@ -48,13 +51,23 @@ class CreatePurchaseOrderTool implements ToolInterface
                 'max:120',
                 Rule::unique('purchase_orders', 'order_number')->where('user_id', $user->id),
             ],
-            'supplier' => ['required', 'string', 'max:150'],
+            'supplier' => ['required_without:supplier_id', 'string', 'max:150'],
+            'supplier_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('suppliers', 'id')->where('user_id', $user->id),
+            ],
             'product_name' => ['nullable', 'string', 'max:150'],
             'status' => ['nullable', 'string', 'max:50'],
             'priority' => ['nullable', 'string', 'max:50'],
             'total_cost' => ['nullable', 'numeric', 'min:0'],
             'items_count' => ['nullable', 'integer', 'min:0'],
             'expected_date' => ['nullable', 'date'],
+            'spare_part_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('spare_parts', 'id')->where('user_id', $user->id),
+            ],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -67,6 +80,16 @@ class CreatePurchaseOrderTool implements ToolInterface
         }
 
         $validated['order_number'] = strtoupper($validated['order_number']);
+
+        if (!empty($validated['supplier_id']) && empty($validated['supplier'])) {
+            $supplierName = Supplier::where('id', $validated['supplier_id'])
+                ->where('user_id', $user->id)
+                ->value('name');
+
+            if ($supplierName) {
+                $validated['supplier'] = $supplierName;
+            }
+        }
 
         return $validated;
     }

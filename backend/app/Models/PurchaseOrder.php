@@ -14,12 +14,15 @@ class PurchaseOrder extends Model
         'user_id',
         'order_number',
         'supplier',
+        'supplier_id',
         'product_name',
+        'spare_part_id',
         'status',
         'priority',
         'total_cost',
         'items_count',
         'expected_date',
+        'received_at',
         'notes',
         'metadata',
     ];
@@ -28,11 +31,22 @@ class PurchaseOrder extends Model
         'total_cost' => 'decimal:2',
         'items_count' => 'integer',
         'expected_date' => 'date',
+        'received_at' => 'datetime',
         'metadata' => 'array',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function sparePart()
+    {
+        return $this->belongsTo(SparePart::class);
     }
 }

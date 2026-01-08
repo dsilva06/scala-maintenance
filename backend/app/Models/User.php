@@ -92,4 +92,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PurchaseOrder::class);
     }
+
+    public function suppliers()
+    {
+        return $this->hasMany(Supplier::class);
+    }
 }

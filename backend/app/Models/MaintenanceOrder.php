@@ -22,6 +22,7 @@ class MaintenanceOrder extends Model
         'mechanic',
         'scheduled_date',
         'completion_date',
+        'completion_mileage',
         'estimated_cost',
         'actual_cost',
         'notes',
@@ -33,6 +34,7 @@ class MaintenanceOrder extends Model
     protected $casts = [
         'scheduled_date' => 'datetime',
         'completion_date' => 'datetime',
+        'completion_mileage' => 'integer',
         'estimated_cost' => 'decimal:2',
         'actual_cost' => 'decimal:2',
         'tasks' => 'array',

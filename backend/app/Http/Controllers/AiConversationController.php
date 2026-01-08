@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AiConversation;
+use App\Models\AiAction;
 use App\Models\AiMessage;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -94,6 +95,14 @@ class AiConversationController extends Controller
             'content' => $validated['message'],
             'status' => 'submitted',
         ]);
+
+        $actionResponse = $this->handleActionIntent($conversation, $user, $validated['message'], $userMessage);
+        if ($actionResponse) {
+            $conversation->update(['last_message_at' => now()]);
+            $this->incrementUsage($subscription);
+
+            return $actionResponse;
+        }
 
         $contextOptions = [
             'conversation' => $conversation,
@@ -242,5 +251,149 @@ class AiConversationController extends Controller
         ];
 
         return response()->json(['data' => $this->contextBuilder->build($request->user(), $options)]);
+    }
+
+    protected function handleActionIntent(
+        AiConversation $conversation,
+        $user,
+        string $message,
+        AiMessage $userMessage
+    ): ?JsonResponse {
+        $intent = $this->parseActionIntent($message);
+
+        if ($intent['type'] === 'none') {
+            return null;
+        }
+
+        $pending = $conversation->actions()
+            ->where('status', 'pending_confirmation')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $action = null;
+        if (!empty($intent['action_id'])) {
+            $action = $pending->firstWhere('id', $intent['action_id']);
+        } elseif ($pending->count() === 1) {
+            $action = $pending->first();
+        }
+
+        if (!$action) {
+            $assistantMessage = $conversation->messages()->create([
+                'user_id' => $user->id,
+                'role' => 'assistant',
+                'content' => 'Hay varias acciones pendientes. Indica el ID o confirma desde el panel de acciones.',
+                'status' => 'completed',
+                'metadata' => [
+                    'status' => 'needs_action_id',
+                ],
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'conversation' => $this->serializeConversation($conversation),
+                    'messages' => [
+                        $this->serializeMessage($userMessage),
+                        $this->serializeMessage($assistantMessage),
+                    ],
+                    'actions' => $pending->map(fn (AiAction $item) => $this->serializeAction($item))->all(),
+                ],
+            ], 202);
+        }
+
+        if ($intent['type'] === 'confirm') {
+            $action = $this->actionService->confirm($action, $user);
+        } else {
+            $action = $this->actionService->cancel($action);
+        }
+
+        $assistantMessage = $conversation->messages()->create([
+            'user_id' => $user->id,
+            'role' => 'assistant',
+            'content' => $this->formatActionSummary($action),
+            'status' => 'completed',
+            'metadata' => [
+                'status' => $action->status,
+                'tool' => $action->tool,
+                'action_id' => $action->id,
+            ],
+        ]);
+
+        return response()->json([
+            'data' => [
+                'conversation' => $this->serializeConversation($conversation),
+                'messages' => [
+                    $this->serializeMessage($userMessage),
+                    $this->serializeMessage($assistantMessage),
+                ],
+                'actions' => [$this->serializeAction($action)],
+            ],
+        ], 202);
+    }
+
+    protected function parseActionIntent(string $message): array
+    {
+        $normalized = strtolower(trim($message));
+        $normalized = preg_replace('/\\s+/', ' ', $normalized) ?? '';
+
+        $confirmKeywords = [
+            'confirmo', 'confirmar', 'confirmacion', 'si', 'sí', 'dale', 'ok', 'vale', 'hazlo', 'ejecuta', 'ejecutar',
+            'adelante', 'aplicar',
+        ];
+        $cancelKeywords = ['cancela', 'cancelar', 'detener', 'deten', 'parar', 'cancelado'];
+
+        $actionId = null;
+        if (preg_match('/\\baccion\\s*#?\\s*(\\d+)\\b/', $normalized, $matches)) {
+            $actionId = (int) $matches[1];
+        } elseif (preg_match('/#(\\d+)/', $normalized, $matches)) {
+            $actionId = (int) $matches[1];
+        }
+
+        foreach ($confirmKeywords as $keyword) {
+            if (strpos($normalized, $keyword) !== false) {
+                return ['type' => 'confirm', 'action_id' => $actionId];
+            }
+        }
+
+        foreach ($cancelKeywords as $keyword) {
+            if (strpos($normalized, $keyword) !== false) {
+                return ['type' => 'cancel', 'action_id' => $actionId];
+            }
+        }
+
+        return ['type' => 'none', 'action_id' => null];
+    }
+
+    protected function formatActionSummary(AiAction $action): string
+    {
+        if ($action->status === 'executed') {
+            return "Accion ejecutada: {$action->tool}.";
+        }
+
+        if ($action->status === 'cancelled') {
+            return "Accion cancelada: {$action->tool}.";
+        }
+
+        if ($action->status === 'failed') {
+            $error = $action->error ? " Motivo: {$action->error}" : '';
+            return "No se pudo ejecutar la accion: {$action->tool}.{$error}";
+        }
+
+        return "Accion registrada: {$action->tool}.";
+    }
+
+    protected function serializeAction(AiAction $action): array
+    {
+        return [
+            'id' => $action->id,
+            'tool' => $action->tool,
+            'status' => $action->status,
+            'requires_confirmation' => $action->requires_confirmation,
+            'arguments' => $action->arguments,
+            'result' => $action->result,
+            'error' => $action->error,
+            'confirmed_at' => optional($action->confirmed_at)->toIso8601String(),
+            'executed_at' => optional($action->executed_at)->toIso8601String(),
+            'cancelled_at' => optional($action->cancelled_at)->toIso8601String(),
+        ];
     }
 }
