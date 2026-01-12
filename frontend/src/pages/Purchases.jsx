@@ -262,6 +262,21 @@ export default function Purchases() {
 
   const supplierSelectValue = formData.supplier_id ? String(formData.supplier_id) : "manual";
 
+  const handleSparePartSelect = (value) => {
+    if (value === "none") {
+      setFormData((prev) => ({ ...prev, spare_part_id: "" }));
+      return;
+    }
+    const matchedPart = spareParts.find((part) => String(part.id) === value);
+    setFormData((prev) => ({
+      ...prev,
+      spare_part_id: value,
+      product_name: matchedPart?.name && !prev.product_name ? matchedPart.name : prev.product_name,
+    }));
+  };
+
+  const sparePartSelectValue = formData.spare_part_id ? String(formData.spare_part_id) : "none";
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -376,7 +391,7 @@ export default function Purchases() {
                         <CardTitle className="text-lg font-semibold text-gray-900">
                           {order.order_number}
                         </CardTitle>
-                        <p className="text-sm text-gray-600 mt-1">{order.supplier}</p>
+                        <p className="text-sm text-gray-600 mt-1">{order.supplier || "Sin proveedor"}</p>
                       </div>
                       <Badge className={`${statusConfig.color} border-0`}>
                         <StatusIcon className="w-3 h-3 mr-1" />
@@ -490,21 +505,111 @@ export default function Purchases() {
                   </div>
                   <div>
                     <label className="block text-sm text-gray-700 mb-1">Proveedor *</label>
+                    <div className="space-y-2">
+                      <Select value={supplierSelectValue} onValueChange={handleSupplierSelect}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un proveedor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">Escribir manualmente</SelectItem>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={String(supplier.id)}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {supplierSelectValue === "manual" ? (
+                        <Input
+                          value={formData.supplier}
+                          onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                          placeholder="Nombre del proveedor"
+                          required
+                        />
+                      ) : (
+                        <p className="text-xs text-gray-500">
+                          {suppliers.find((supplier) => String(supplier.id) === supplierSelectValue)?.contact_name || "Seleccionado"}
+                        </p>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSupplierForm((prev) => !prev)}
+                        className="w-full"
+                      >
+                        {showSupplierForm ? "Ocultar proveedor" : "Agregar proveedor"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                {showSupplierForm && (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-800">Nuevo proveedor</p>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowSupplierForm(false)}>
+                        Cerrar
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <Input
+                        value={supplierDraft.name}
+                        onChange={(e) => setSupplierDraft({ ...supplierDraft, name: e.target.value })}
+                        placeholder="Nombre del proveedor"
+                      />
+                      <Input
+                        value={supplierDraft.contact_name}
+                        onChange={(e) => setSupplierDraft({ ...supplierDraft, contact_name: e.target.value })}
+                        placeholder="Contacto"
+                      />
+                      <Input
+                        value={supplierDraft.phone}
+                        onChange={(e) => setSupplierDraft({ ...supplierDraft, phone: e.target.value })}
+                        placeholder="Teléfono"
+                      />
+                      <Input
+                        value={supplierDraft.email}
+                        onChange={(e) => setSupplierDraft({ ...supplierDraft, email: e.target.value })}
+                        placeholder="Email"
+                        type="email"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setShowSupplierForm(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateSupplier}>
+                        Guardar proveedor
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Producto *</label>
                     <Input
-                      value={formData.supplier}
-                      onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                      value={formData.product_name}
+                      onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
+                      placeholder="Nombre del producto"
                       required
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 mb-1">Producto *</label>
-                  <Input
-                    value={formData.product_name}
-                    onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
-                    placeholder="Nombre del producto"
-                    required
-                  />
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Repuesto asociado</label>
+                    <Select value={sparePartSelectValue} onValueChange={handleSparePartSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un repuesto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sin repuesto</SelectItem>
+                        {spareParts.map((part) => (
+                          <SelectItem key={part.id} value={String(part.id)}>
+                            {part.name} ({part.current_stock} en stock)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

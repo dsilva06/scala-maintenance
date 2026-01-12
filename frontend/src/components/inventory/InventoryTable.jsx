@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, ImageOff, Package, Trash2 } from 'lucide-react';
 
 export default function InventoryTable({ parts, isLoading, onEdit, onDelete }) {
+  const [preview, setPreview] = useState(null);
+
   const getStockStatus = (part) => {
     if (part.current_stock <= part.minimum_stock) {
       return <Badge variant="destructive">Bajo</Badge>;
@@ -52,7 +54,18 @@ export default function InventoryTable({ parts, isLoading, onEdit, onDelete }) {
             <TableRow key={part.id} className="hover:bg-gray-50"> {/* Added hover class */}
               <TableCell>
                 {part.photo_url ? (
-                  <img src={part.photo_url} alt={part.name} className="w-16 h-16 object-cover rounded-md" />
+                  <button
+                    type="button"
+                    onClick={() => setPreview({ url: part.photo_url, name: part.name })}
+                    className="group relative"
+                  >
+                    <img
+                      src={part.photo_url}
+                      alt={part.name}
+                      className="w-16 h-16 object-cover rounded-md ring-1 ring-transparent group-hover:ring-blue-300 transition"
+                    />
+                    <span className="sr-only">Ver imagen</span>
+                  </button>
                 ) : (
                   <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
                     <ImageOff className="w-6 h-6 text-gray-400" />
@@ -96,6 +109,21 @@ export default function InventoryTable({ parts, isLoading, onEdit, onDelete }) {
           ))}
         </TableBody>
       </Table>
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
+          <div className="relative max-w-3xl w-full bg-white rounded-2xl p-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3">
+              <p className="text-sm font-semibold text-gray-800">{preview.name}</p>
+              <Button variant="ghost" size="sm" onClick={() => setPreview(null)}>
+                Cerrar
+              </Button>
+            </div>
+            <div className="flex items-center justify-center">
+              <img src={preview.url} alt={preview.name} className="max-h-[70vh] w-auto rounded-xl object-contain" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

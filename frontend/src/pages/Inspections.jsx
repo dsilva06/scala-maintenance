@@ -4,9 +4,10 @@ import { Inspection, Vehicle } from "@/api/entities";
 import { createMaintenanceOrder } from "@/api/maintenanceOrders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, ClipboardCheck, Search, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { Plus, ClipboardCheck, Search, CheckCircle, XCircle } from "lucide-react";
 import InspectionCard from "../components/inspections/InspectionCard";
 import InspectionForm from "../components/inspections/InspectionForm";
+import InspectionDetailDialog from "../components/inspections/InspectionDetailDialog";
 
 export default function Inspections() {
   const [inspections, setInspections] = useState([]);
@@ -14,6 +15,7 @@ export default function Inspections() {
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingInspection, setEditingInspection] = useState(null);
+  const [selectedInspection, setSelectedInspection] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState(() => {
@@ -53,10 +55,12 @@ export default function Inspections() {
         Inspection.list({ sort: '-inspection_date', month: monthFilter }),
         Vehicle.list()
       ]);
+
       const normalizeStatus = (status) => {
         if (status === 'disponible') return 'ok';
-        if (status === 'limitado') return 'revision';
+        if (status === 'limitado') return 'mantenimiento';
         if (status === 'no_disponible') return 'mantenimiento';
+        if (status === 'revision') return 'mantenimiento';
         return status || 'ok';
       };
 
@@ -96,49 +100,11 @@ export default function Inspections() {
 
   const handlePostInspectionActions = async (inspection) => {
     try {
-      // 1. Actualizar kilometraje del vehículo
       await Vehicle.update(inspection.vehicle_id, { 
         current_mileage: inspection.mileage 
       });
 
-      // 2. Actualizar estado del vehículo según inspección
-      // 2. Actualizar estado del vehículo según inspección
-      let vehicleStatus = 'activo';
-      if (inspection.overall_status === 'mantenimiento') {
-        vehicleStatus = 'fuera_servicio';
-      } else if (inspection.overall_status === 'revision') {
-        vehicleStatus = 'mantenimiento';
-      }
-      await Vehicle.update(inspection.vehicle_id, { status: vehicleStatus });
-
-      // 3. Crear órdenes de mantenimiento según estado general
-      if (inspection.overall_status === 'mantenimiento') {
-        await createMaintenanceOrder({
-          vehicle_id: Number(inspection.vehicle_id),
-          order_number: `MNT-INS-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          type: 'correctivo',
-          priority: 'critica',
-          status: 'pendiente',
-          description: `Generado por inspección - Hacer mantenimiento`,
-          mechanic: inspection.inspector || undefined,
-          notes: `Orden creada automáticamente por inspección.`,
-        });
-      } else if (inspection.overall_status === 'revision') {
-        await createMaintenanceOrder({
-          vehicle_id: Number(inspection.vehicle_id),
-          order_number: `MNT-INS-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          type: 'preventivo',
-          priority: 'media',
-          status: 'pendiente',
-          description: `Generado por inspección - Revisión`,
-          mechanic: inspection.inspector || undefined,
-          notes: `Orden creada automáticamente por inspección.`,
-        });
-      }
-
-      // 4. Lógica AI de kilometraje
       await checkMileageForMaintenance(inspection);
-      
     } catch (error) {
       console.error("Error en acciones post-inspección:", error);
     }
@@ -191,11 +157,18 @@ export default function Inspections() {
     if (window.confirm("¿Estás seguro de que quieres eliminar esta inspección?")) {
       try {
         await Inspection.delete(inspectionId);
+        if (selectedInspection?.id === inspectionId) {
+          setSelectedInspection(null);
+        }
         loadData();
       } catch (error) {
         console.error("Error deleting inspection:", error);
       }
     }
+  };
+
+  const handleViewInspection = (inspection) => {
+    setSelectedInspection(inspection);
   };
 
   if (isLoading) {
@@ -245,9 +218,6 @@ export default function Inspections() {
             <Button variant={statusFilter === 'ok' ? 'default' : 'outline'} className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200 data-[state=open]:bg-green-200" onClick={() => setStatusFilter('ok')}>
               <CheckCircle className="w-4 h-4 mr-2"/> OK
             </Button>
-            <Button variant={statusFilter === 'revision' ? 'default' : 'outline'} className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200" onClick={() => setStatusFilter('revision')}>
-              <AlertTriangle className="w-4 h-4 mr-2"/> Revisión
-            </Button>
             <Button variant={statusFilter === 'mantenimiento' ? 'default' : 'outline'} className="bg-red-100 text-red-800 border-red-200 hover:bg-red-200" onClick={() => setStatusFilter('mantenimiento')}>
               <XCircle className="w-4 h-4 mr-2"/> Hacer mantenimiento
             </Button>
@@ -263,6 +233,7 @@ export default function Inspections() {
                 vehicle={vehicles.find(v => v.id === inspection.vehicle_id)}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onView={handleViewInspection}
               />
             ))
           ) : (
@@ -282,6 +253,15 @@ export default function Inspections() {
             onCancel={() => { setShowForm(false); setEditingInspection(null); }}
           />
         )}
+
+        <InspectionDetailDialog
+          open={Boolean(selectedInspection)}
+          inspection={selectedInspection}
+          vehicle={vehicles.find(v => v.id === selectedInspection?.vehicle_id)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedInspection(null);
+          }}
+        />
       </div>
     </div>
   );

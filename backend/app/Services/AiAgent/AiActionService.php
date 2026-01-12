@@ -11,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class AiActionService
 {
-    public function __construct(private readonly McpRegistry $registry)
+    public function __construct(
+        private readonly McpRegistry $registry,
+        private readonly AiMemoryService $memoryService
+    )
     {
     }
 
@@ -62,6 +65,12 @@ class AiActionService
                 'error' => null,
                 'executed_at' => now(),
             ]);
+
+            try {
+                $this->memoryService->recordFromAction($action->refresh(), $user);
+            } catch (\Throwable $exception) {
+                // Memory failures should not block action execution.
+            }
         } catch (ValidationException $exception) {
             $action->update([
                 'status' => 'failed',

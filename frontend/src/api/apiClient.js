@@ -243,6 +243,61 @@ function createPurchaseOrderClient() {
   };
 }
 
+function createSupplierClient() {
+  const sortMap = {
+    created_date: 'created_at',
+    updated_date: 'updated_at',
+    name: 'name',
+  };
+
+  const list = async (sortOrParams, limit) => {
+    const params =
+      typeof sortOrParams === 'object' && sortOrParams !== null
+        ? { ...sortOrParams }
+        : {
+            sort: sortOrParams,
+            ...(limit ? { limit } : {}),
+          };
+
+    if (params.sort) {
+      params.sort = normalizeSort(params.sort, sortMap);
+    }
+
+    const query = buildQuery(params);
+    const response = await httpClient.get(`/api/suppliers${query ? `?${query}` : ''}`);
+    return response?.data ?? [];
+  };
+
+  const get = async (id) => {
+    const response = await httpClient.get(`/api/suppliers/${id}`);
+    return response?.data ?? response;
+  };
+
+  const create = async (payload) => {
+    const response = await httpClient.post('/api/suppliers', payload);
+    return response?.data ?? response;
+  };
+
+  const update = async (id, payload) => {
+    const response = await httpClient.patch(`/api/suppliers/${id}`, payload);
+    return response?.data ?? response;
+  };
+
+  const destroy = async (id) => {
+    await httpClient.delete(`/api/suppliers/${id}`);
+    return null;
+  };
+
+  return {
+    list,
+    filter: (params = {}) => list(params),
+    get,
+    create,
+    update,
+    delete: destroy,
+  };
+}
+
 function createPlaceholderEntity(name) {
   const notImplemented = () => {
     throw new Error(`${name} API not implemented yet`);
@@ -268,6 +323,7 @@ export const apiClient = {
     Inspection: createInspectionClient(),
     SparePart: createSparePartClient(),
     PurchaseOrder: createPurchaseOrderClient(),
+    Supplier: createSupplierClient(),
     Document: createPlaceholderEntity('Document'),
     RepairGuide: createPlaceholderEntity('RepairGuide'),
     Trip: createPlaceholderEntity('Trip'),

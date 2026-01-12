@@ -5,14 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Car, User, Calendar, Edit, Trash2, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-export default function InspectionCard({ inspection, vehicle, onEdit, onDelete }) {
+export default function InspectionCard({ inspection, vehicle, onEdit, onDelete, onView }) {
   const getStatusInfo = (status) => {
     switch (status) {
       case 'disponible':
         status = 'ok';
         break;
       case 'limitado':
-        status = 'revision';
+      case 'revision':
+        status = 'mantenimiento';
         break;
       case 'no_disponible':
         status = 'mantenimiento';
@@ -24,8 +25,6 @@ export default function InspectionCard({ inspection, vehicle, onEdit, onDelete }
     switch (status) {
       case 'ok':
         return { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, label: 'OK' };
-      case 'revision':
-        return { color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertTriangle, label: 'Revisión' };
       case 'mantenimiento':
         return { color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle, label: 'Hacer mantenimiento' };
       default:
@@ -35,8 +34,28 @@ export default function InspectionCard({ inspection, vehicle, onEdit, onDelete }
 
   const statusInfo = getStatusInfo(inspection.overall_status);
 
+  const handleCardClick = () => {
+    if (onView) {
+      onView(inspection);
+    }
+  };
+
+  const handleCardKeyDown = (event) => {
+    if (!onView) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onView(inspection);
+    }
+  };
+
   return (
-    <Card className="shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+    <Card
+      className="shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col h-full cursor-pointer"
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      role={onView ? "button" : undefined}
+      tabIndex={onView ? 0 : undefined}
+    >
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <div>
@@ -61,11 +80,25 @@ export default function InspectionCard({ inspection, vehicle, onEdit, onDelete }
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-auto">
-          <Button variant="outline" size="sm" onClick={() => onEdit(inspection)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit(inspection);
+            }}
+          >
             <Edit className="w-3.5 h-3.5 mr-1" />
             Editar
           </Button>
-          <Button variant="destructive" size="sm" onClick={() => onDelete(inspection.id)}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete(inspection.id);
+            }}
+          >
             <Trash2 className="w-3.5 h-3.5 mr-1" />
             Eliminar
           </Button>

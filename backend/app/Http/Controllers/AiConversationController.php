@@ -75,6 +75,15 @@ class AiConversationController extends Controller
         ]);
     }
 
+    public function destroy(Request $request, AiConversation $conversation): JsonResponse
+    {
+        $this->authorizeConversation($request, $conversation);
+
+        $conversation->delete();
+
+        return new JsonResponse(null, 204);
+    }
+
     public function storeMessage(Request $request, AiConversation $conversation): JsonResponse
     {
         $this->authorizeConversation($request, $conversation);
@@ -108,6 +117,7 @@ class AiConversationController extends Controller
             'conversation' => $conversation,
             'message' => $validated['message'],
             'memory_limit' => config('services.ai_agent.memory_limit', 8),
+            'operational_memory_limit' => config('services.ai_agent.operational_memory_limit', 6),
         ];
 
         $businessContext = $this->contextBuilder->build($user, $contextOptions);
@@ -248,6 +258,7 @@ class AiConversationController extends Controller
     {
         $options = [
             'memory_limit' => config('services.ai_agent.memory_limit', 8),
+            'operational_memory_limit' => config('services.ai_agent.operational_memory_limit', 6),
         ];
 
         return response()->json(['data' => $this->contextBuilder->build($request->user(), $options)]);
@@ -270,10 +281,30 @@ class AiConversationController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        if ($pending->isEmpty()) {
+            $assistantMessage = $conversation->messages()->create([
+                'user_id' => $user->id,
+                'role' => 'assistant',
+                'content' => 'No hay acciones pendientes para confirmar o cancelar.',
+                'status' => 'completed',
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'conversation' => $this->serializeConversation($conversation),
+                    'messages' => [
+                        $this->serializeMessage($userMessage),
+                        $this->serializeMessage($assistantMessage),
+                    ],
+                    'actions' => [],
+                ],
+            ], 202);
+        }
+
         $action = null;
         if (!empty($intent['action_id'])) {
             $action = $pending->firstWhere('id', $intent['action_id']);
-        } elseif ($pending->count() === 1) {
+        } else {
             $action = $pending->first();
         }
 

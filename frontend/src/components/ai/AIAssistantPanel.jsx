@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createConversation, sendAiMessage } from "@/api/ai";
+import { buildConversationTitle } from "@/lib/aiConversationTitle";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,9 +14,9 @@ export default function AIAssistantPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const ensureConversation = async () => {
+  const ensureConversation = async (title) => {
     if (conversationId) return conversationId;
-    const data = await createConversation({ title: "Asistente rápido" });
+    const data = await createConversation({ title: title || "Asistente rapido" });
     setConversationId(data?.id);
     return data?.id;
   };
@@ -25,7 +26,7 @@ export default function AIAssistantPanel() {
     setLoading(true);
     setError(null);
     try {
-      const convId = await ensureConversation();
+      const convId = await ensureConversation(buildConversationTitle(message));
       const data = await sendAiMessage({ conversationId: convId, message });
       const assistantMsg = data?.messages?.find(m => m.role === "assistant");
       setDraft(assistantMsg);

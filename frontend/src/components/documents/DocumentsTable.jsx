@@ -14,6 +14,23 @@ import {
 import { MoreHorizontal } from "lucide-react";
 
 export default function DocumentsTable({ documents, vehicles, isLoading, onEdit, onDelete }) {
+  const documentLabels = {
+    seguro: 'Póliza de Seguro',
+    tarjeta_operacion: 'Tarjeta de Operación',
+    revision_tecnica: 'Revisión Técnica',
+    soat: 'SOAT',
+    permiso_especial: 'Permiso Especial',
+    daex: 'DAEX',
+    roct: 'ROCT',
+    resquimc: 'RESQUIMC',
+    racda: 'RACDA',
+  };
+
+  const formatDocumentType = (type) => {
+    if (!type) return 'Documento';
+    return documentLabels[type] || type.replace(/_/g, ' ').toUpperCase();
+  };
+
   const getStatus = (expirationDate) => {
     const today = new Date();
     const expDate = new Date(expirationDate);
@@ -43,9 +60,9 @@ export default function DocumentsTable({ documents, vehicles, isLoading, onEdit,
           {documents.map(doc => {
             const vehicle = vehicles.find(v => v.id === doc.vehicle_id);
             return (
-              <TableRow key={doc.id}>
-                <TableCell>
-                  <p className="font-medium capitalize">{doc.document_type.replace(/_/g, ' ')}</p>
+                <TableRow key={doc.id}>
+                  <TableCell>
+                  <p className="font-medium">{formatDocumentType(doc.document_type)}</p>
                   <p className="text-xs text-gray-500">{doc.document_number}</p>
                 </TableCell>
                 <TableCell>{vehicle ? `${vehicle.plate} - ${vehicle.brand}` : 'N/A'}</TableCell>

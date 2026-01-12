@@ -25,6 +25,13 @@ class InspectionStoreRequest extends FormRequest
             'checklist_items.*.item' => ['required', 'string', 'max:150'],
             'checklist_items.*.status' => ['required', 'string', 'max:50'],
             'checklist_items.*.notes' => ['nullable', 'string'],
+            'checklist_items.*.evidence' => ['nullable', 'array'],
+            'checklist_items.*.evidence.*.file_url' => ['nullable', 'string'],
+            'checklist_items.*.evidence.*.file_name' => ['nullable', 'string', 'max:255'],
+            'checklist_items.*.evidence.*.comment' => ['nullable', 'string'],
+            'checklist_items.*.evidence.*.numeric_value' => ['nullable', 'numeric'],
+            'checklist_items.*.evidence.*.ai_suggestion' => ['nullable', 'string'],
+            'checklist_items.*.evidence.*.ai_status' => ['nullable', 'string', 'max:50'],
             'attachments' => ['nullable', 'array'],
             'metadata' => ['nullable', 'array'],
         ];

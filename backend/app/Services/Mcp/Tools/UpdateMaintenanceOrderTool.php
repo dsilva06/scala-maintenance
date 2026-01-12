@@ -121,6 +121,7 @@ class UpdateMaintenanceOrderTool implements ToolInterface
 
         if ($order->vehicle_id) {
             $this->refreshVehicleStatus($order->vehicle_id, $user->id);
+            $this->syncVehicleMileageFromOrder($order, $updates);
         }
 
         return [
@@ -168,5 +169,43 @@ class UpdateMaintenanceOrderTool implements ToolInterface
         Vehicle::where('id', $vehicleId)
             ->where('user_id', $userId)
             ->update(['status' => $newStatus]);
+    }
+
+    protected function syncVehicleMileageFromOrder(MaintenanceOrder $order, array $updates): void
+    {
+        if (($updates['status'] ?? $order->status) !== 'completada') {
+            return;
+        }
+
+        if (! array_key_exists('completion_mileage', $updates) && $order->completion_mileage === null) {
+            return;
+        }
+
+        $completionMileage = $updates['completion_mileage'] ?? $order->completion_mileage;
+        if ($completionMileage === null) {
+            return;
+        }
+
+        $vehicle = Vehicle::where('id', $order->vehicle_id)
+            ->where('user_id', $order->user_id)
+            ->first();
+
+        if (! $vehicle) {
+            return;
+        }
+
+        $currentMileage = (int) ($vehicle->current_mileage ?? 0);
+        $newMileage = max($currentMileage, (int) $completionMileage);
+
+        $updatesVehicle = ['current_mileage' => $newMileage];
+
+        $completionDate = $updates['completion_date'] ?? $order->completion_date;
+        if ($completionDate) {
+            $updatesVehicle['last_service_date'] = $completionDate instanceof \DateTimeInterface
+                ? $completionDate->format('Y-m-d')
+                : (string) $completionDate;
+        }
+
+        $vehicle->update($updatesVehicle);
     }
 }

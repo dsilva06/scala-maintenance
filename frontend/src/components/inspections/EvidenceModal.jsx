@@ -6,22 +6,39 @@ import { Label } from '@/components/ui/label';
 import { Upload } from 'lucide-react';
 
 export default function EvidenceModal({ isOpen, onClose, onSave, itemName }) {
-    const [file, setFile] = useState(null);
-    const [preview, setPreview] = useState(null);
+    const [fileUrl, setFileUrl] = useState("");
+    const [fileName, setFileName] = useState("");
+    const [preview, setPreview] = useState("");
     const [comment, setComment] = useState('');
     const [numericValue, setNumericValue] = useState('');
 
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
-        if (selectedFile) {
-            setFile(selectedFile);
-            setPreview(URL.createObjectURL(selectedFile));
+        if (!selectedFile) return;
+        if (selectedFile.size > 5 * 1024 * 1024) {
+            alert("La imagen supera el maximo de 5MB.");
+            return;
         }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result;
+            if (typeof result === "string") {
+                setFileUrl(result);
+                setFileName(selectedFile.name || "");
+                setPreview(result);
+            }
+        };
+        reader.onerror = () => {
+            alert("No se pudo cargar la imagen.");
+        };
+        reader.readAsDataURL(selectedFile);
     };
 
     const handleSave = () => {
         onSave({
-            file,
+            file_url: fileUrl || null,
+            file_name: fileName || null,
             comment,
             numeric_value: numericValue ? parseFloat(numericValue) : null,
         });
@@ -29,8 +46,9 @@ export default function EvidenceModal({ isOpen, onClose, onSave, itemName }) {
     };
 
     const resetAndClose = () => {
-        setFile(null);
-        setPreview(null);
+        setFileUrl("");
+        setFileName("");
+        setPreview("");
         setComment('');
         setNumericValue('');
         onClose();

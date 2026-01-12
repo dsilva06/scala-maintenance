@@ -88,6 +88,10 @@ export default function DocumentForm({ doc, vehicles, onSubmit, onCancel, existi
                     <SelectItem value="revision_tecnica">Revisión Técnica</SelectItem>
                     <SelectItem value="soat">SOAT</SelectItem>
                     <SelectItem value="permiso_especial">Permiso Especial</SelectItem>
+                    <SelectItem value="daex">DAEX</SelectItem>
+                    <SelectItem value="roct">ROCT</SelectItem>
+                    <SelectItem value="resquimc">RESQUIMC</SelectItem>
+                    <SelectItem value="racda">RACDA</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

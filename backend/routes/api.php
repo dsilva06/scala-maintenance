@@ -43,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('conversations', [AiConversationController::class, 'index']);
         Route::post('conversations', [AiConversationController::class, 'store']);
         Route::get('conversations/{conversation}', [AiConversationController::class, 'show']);
+        Route::delete('conversations/{conversation}', [AiConversationController::class, 'destroy']);
         Route::post('conversations/{conversation}/messages', [AiConversationController::class, 'storeMessage']);
         Route::get('conversations/{conversation}/actions', [AiActionController::class, 'index']);
         Route::post('actions/{action}/confirm', [AiActionController::class, 'confirm']);

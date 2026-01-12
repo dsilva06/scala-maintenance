@@ -97,4 +97,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Supplier::class);
     }
+
+    public function aiMemories()
+    {
+        return $this->hasMany(AiMemory::class);
+    }
 }

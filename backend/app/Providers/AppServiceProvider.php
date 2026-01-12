@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
 use App\Services\AiAgent\AiActionService;
+use App\Services\AiAgent\AiMemoryService;
 use App\Services\Mcp\McpContextBuilder;
 use App\Services\Mcp\McpRegistry;
 use App\Services\Mcp\McpServer;
@@ -34,7 +35,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(AiActionService::class, function ($app) {
-            return new AiActionService($app->make(McpRegistry::class));
+            return new AiActionService(
+                $app->make(McpRegistry::class),
+                $app->make(AiMemoryService::class)
+            );
         });
     }
 

@@ -217,23 +217,51 @@ const faultServiceMapping = {
   }
 };
 
+const normalizeTask = (task) => {
+  if (!task) return null;
+  if (typeof task === "string") {
+    return { category: "", description: task };
+  }
+  if (typeof task === "object") {
+    return {
+      category: task.category || task.system || task.component || "",
+      description: task.description || task.fault || task.task || "",
+    };
+  }
+  return null;
+};
+
+const buildTaskLabel = (task) => {
+  if (!task) return "";
+  const description = task.description || task.fault || task.task || "";
+  const category = task.category || "";
+  return category ? `${category}: ${description}` : description;
+};
+
 export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCancel, existingOrders }) {
   const [type, setType] = useState(order?.type || "correctivo");
+  const initialTasks = Array.isArray(order?.tasks) && order.tasks.length > 0
+    ? order.tasks.map(normalizeTask).filter(Boolean)
+    : order?.description
+    ? [{ category: "", description: order.description }]
+    : [];
   const [formData, setFormData] = useState({
     vehicle_id: order?.vehicle_id ? String(order.vehicle_id) : "",
     order_number: order?.order_number || `MNT-${Date.now()}`,
     type: order?.type || "correctivo",
     priority: order?.priority || "media",
     status: order?.status || "pendiente",
-    fault_category: order?.fault_category || "",
-    fault_description: order?.description || "",
+    tasks: initialTasks,
     scheduled_date: order?.scheduled_date ? format(new Date(order.scheduled_date), 'yyyy-MM-dd') : "",
+    completion_date: order?.completion_date ? format(new Date(order.completion_date), 'yyyy-MM-dd') : "",
+    completion_mileage: order?.completion_mileage ?? "",
     mechanic: order?.mechanic || "",
     notes: order?.notes || ""
   });
 
   const [selectedFaultCategory, setSelectedFaultCategory] = useState(order?.fault_category || "");
   const [isServiceOpen, setIsServiceOpen] = useState(false);
+  const [customTask, setCustomTask] = useState("");
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -243,23 +271,76 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
     setType(newType);
     handleChange('type', newType);
     setSelectedFaultCategory("");
-    handleChange('fault_category', "");
-    handleChange('fault_description', "");
+    handleChange('tasks', []);
+    setIsServiceOpen(false);
   };
 
   const handleFaultCategoryChange = (category) => {
     setSelectedFaultCategory(category);
-    handleChange('fault_category', category);
-    handleChange('fault_description', "");
     setIsServiceOpen(true);
+  };
+
+  const isTaskSelected = (category, description) => {
+    return (formData.tasks || []).some(
+      (task) => (task.category || "") === category && (task.description || "") === description
+    );
+  };
+
+  const toggleTask = (category, description) => {
+    setFormData((prev) => {
+      const tasks = Array.isArray(prev.tasks) ? [...prev.tasks] : [];
+      const index = tasks.findIndex(
+        (task) => (task.category || "") === category && (task.description || "") === description
+      );
+      if (index >= 0) {
+        tasks.splice(index, 1);
+      } else {
+        tasks.push({ category, description });
+      }
+      return { ...prev, tasks };
+    });
+  };
+
+  const handleAddCustomTask = () => {
+    const trimmed = customTask.trim();
+    if (!trimmed) return;
+    setFormData((prev) => ({
+      ...prev,
+      tasks: [...(prev.tasks || []), { category: "Personalizado", description: trimmed }],
+    }));
+    setCustomTask("");
+  };
+
+  const handleRemoveTask = (index) => {
+    setFormData((prev) => {
+      const tasks = Array.isArray(prev.tasks) ? [...prev.tasks] : [];
+      tasks.splice(index, 1);
+      return { ...prev, tasks };
+    });
+  };
+
+  const buildTaskKey = (orderTasks, description) => {
+    if (Array.isArray(orderTasks) && orderTasks.length > 0) {
+      return orderTasks
+        .map((task) => buildTaskLabel(normalizeTask(task)).toLowerCase().trim())
+        .sort()
+        .join("|");
+    }
+    return (description || "").toLowerCase().trim();
+  };
+
+  const buildTaskSummary = (tasks) => {
+    if (!Array.isArray(tasks) || tasks.length === 0) return "";
+    return tasks.map((task) => buildTaskLabel(task)).join(" | ");
   };
 
   const validateForm = () => {
     const openStatuses = ['pendiente', 'en_progreso'];
+    const currentTaskKey = buildTaskKey(formData.tasks, "");
     const duplicateOrder = existingOrders.find(
       o =>
         o.vehicle_id === formData.vehicle_id &&
-        o.description?.trim().toLowerCase() === formData.fault_description?.trim().toLowerCase() &&
+        buildTaskKey(o.tasks, o.description) === currentTaskKey &&
         openStatuses.includes(o.status) &&
         o.id !== order?.id
     );
@@ -271,9 +352,9 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
       return false;
     }
     
-    if (!formData.vehicle_id || !formData.fault_description) {
+    if (!formData.vehicle_id || !formData.tasks || formData.tasks.length === 0) {
       toast.warning("Campos requeridos", {
-        description: "Por favor, selecciona un vehículo y describe la falla/tarea."
+        description: "Por favor, selecciona un vehículo y agrega al menos un trabajo."
       });
       return false;
     }
@@ -284,10 +365,16 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
+      const normalizedTasks = (formData.tasks || [])
+        .map(normalizeTask)
+        .filter((task) => task && task.description);
+      const taskSummary = buildTaskSummary(normalizedTasks);
       const finalData = {
         ...formData,
-        description: formData.fault_description,
+        description: taskSummary,
         vehicle_id: Number(formData.vehicle_id),
+        completion_mileage: formData.completion_mileage === "" ? null : Number(formData.completion_mileage),
+        tasks: normalizedTasks,
       };
       onSubmit(finalData);
     }
@@ -367,7 +454,7 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
                 <Collapsible open={isServiceOpen} onOpenChange={setIsServiceOpen}>
                   <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium">
                     {isServiceOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    Seleccionar Falla/Problema Específico
+                    Seleccionar trabajos específicos
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2">
                     <div className="max-h-60 overflow-y-auto">
@@ -376,8 +463,8 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
                           <Button
                             key={fault}
                             type="button"
-                            variant={formData.fault_description === fault ? 'default' : 'outline'}
-                            onClick={() => handleChange('fault_description', fault)}
+                            variant={isTaskSelected(selectedFaultCategory, fault) ? 'default' : 'outline'}
+                            onClick={() => toggleTask(selectedFaultCategory, fault)}
                             className="text-left justify-start text-sm h-auto py-2 px-3"
                           >
                             {fault}
@@ -388,6 +475,40 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
                   </CollapsibleContent>
                 </Collapsible>
               )}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Trabajos seleccionados *</Label>
+                <span className="text-xs text-gray-500">{formData.tasks?.length || 0} seleccionados</span>
+              </div>
+              {formData.tasks?.length > 0 ? (
+                <div className="space-y-2">
+                  {formData.tasks.map((task, index) => (
+                    <div
+                      key={`${task.category || 'general'}-${task.description}-${index}`}
+                      className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <span className="text-gray-700">{buildTaskLabel(task)}</span>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveTask(index)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Selecciona uno o más trabajos para crear la orden.</p>
+              )}
+              <div className="flex flex-col gap-2 md:flex-row">
+                <Input
+                  value={customTask}
+                  onChange={(e) => setCustomTask(e.target.value)}
+                  placeholder="Agregar trabajo personalizado..."
+                />
+                <Button type="button" variant="outline" onClick={handleAddCustomTask}>
+                  Agregar
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -408,6 +529,33 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
                 </Select>
               </div>
             </div>
+
+            {formData.status === 'completada' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="completion_date">Fecha de cierre</Label>
+                  <Input
+                    id="completion_date"
+                    type="date"
+                    value={formData.completion_date}
+                    onChange={(e) => handleChange('completion_date', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="completion_mileage">Kilometraje al cierre</Label>
+                  <Input
+                    id="completion_mileage"
+                    type="number"
+                    min="0"
+                    value={formData.completion_mileage}
+                    onChange={(e) =>
+                      handleChange('completion_mileage', e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                    placeholder="Ej: 125000"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

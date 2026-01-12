@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Models\Inspection;
 use App\Models\MaintenanceOrder;
 use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
@@ -61,6 +62,7 @@ class MaintenanceOrderController extends Controller
             $this->refreshVehicleStatus($order->vehicle_id, $user->id);
             $this->syncVehicleMileageFromOrder($order, $validated);
         }
+        $this->refreshInspectionStatus($order);
 
         return JsonResource::make($order->load('vehicle'))->response()->setStatusCode(201);
     }
@@ -88,6 +90,7 @@ class MaintenanceOrderController extends Controller
             $this->refreshVehicleStatus($maintenanceOrder->vehicle_id, $request->user()->id);
             $this->syncVehicleMileageFromOrder($maintenanceOrder, $validated);
         }
+        $this->refreshInspectionStatus($maintenanceOrder);
 
         return JsonResource::make($maintenanceOrder->load('vehicle'));
     }
@@ -101,6 +104,7 @@ class MaintenanceOrderController extends Controller
         if ($maintenanceOrder->vehicle_id) {
             $this->refreshVehicleStatus($maintenanceOrder->vehicle_id, $request->user()->id);
         }
+        $this->refreshInspectionStatus($maintenanceOrder);
 
         return new JsonResponse(null, 204);
     }
@@ -188,5 +192,39 @@ class MaintenanceOrderController extends Controller
         }
 
         $vehicle->update($updates);
+    }
+
+    protected function refreshInspectionStatus(MaintenanceOrder $order): void
+    {
+        $inspectionId = data_get($order->metadata, 'inspection_id');
+
+        if (!$inspectionId) {
+            return;
+        }
+
+        $inspection = Inspection::where('id', $inspectionId)
+            ->where('user_id', $order->user_id)
+            ->first();
+
+        if (!$inspection) {
+            return;
+        }
+
+        $baseQuery = MaintenanceOrder::where('user_id', $order->user_id)
+            ->where('metadata->inspection_id', $inspectionId);
+
+        if ((clone $baseQuery)->count() === 0) {
+            return;
+        }
+
+        $hasIncomplete = (clone $baseQuery)
+            ->where('status', '!=', 'completada')
+            ->exists();
+
+        $nextStatus = $hasIncomplete ? 'mantenimiento' : 'ok';
+
+        if ($inspection->overall_status !== $nextStatus) {
+            $inspection->update(['overall_status' => $nextStatus]);
+        }
     }
 }

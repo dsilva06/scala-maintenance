@@ -3,6 +3,7 @@
 namespace App\Services\Mcp\Tools;
 
 use App\Models\PurchaseOrder;
+use App\Models\SparePart;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\Mcp\Contracts\ToolInterface;
@@ -99,6 +100,7 @@ class CreatePurchaseOrderTool implements ToolInterface
         $validated = $this->validateArguments($arguments, $user);
 
         $order = $user->purchaseOrders()->create($validated);
+        $this->applyInventoryReceipt($order);
 
         return [
             'id' => $order->id,
@@ -109,5 +111,33 @@ class CreatePurchaseOrderTool implements ToolInterface
             'total_cost' => $order->total_cost,
             'expected_date' => optional($order->expected_date)->toIso8601String(),
         ];
+    }
+
+    protected function applyInventoryReceipt(PurchaseOrder $order): void
+    {
+        if ($order->status !== 'received') {
+            return;
+        }
+
+        if (! $order->spare_part_id) {
+            return;
+        }
+
+        $quantity = max(0, (int) $order->items_count);
+
+        if ($quantity <= 0) {
+            return;
+        }
+
+        $part = SparePart::query()
+            ->where('id', $order->spare_part_id)
+            ->where('user_id', $order->user_id)
+            ->first();
+
+        if (! $part) {
+            return;
+        }
+
+        $part->increment('current_stock', $quantity);
     }
 }

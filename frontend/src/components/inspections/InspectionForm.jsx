@@ -99,10 +99,8 @@ export default function InspectionForm({ inspection, vehicles, onSubmit, onCance
     });
 
     let overall_status = 'ok';
-    if (criticalCount > 0) {
+    if (criticalCount > 0 || observationCount > 0) {
       overall_status = 'mantenimiento';
-    } else if (observationCount > 0) {
-      overall_status = 'revision';
     }
 
     const finalInspectionData = { 

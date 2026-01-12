@@ -43,6 +43,7 @@ return [
         'timeout' => env('AI_AGENT_TIMEOUT', 60),
         'use_tools' => env('AI_AGENT_USE_TOOLS', true),
         'memory_limit' => env('AI_AGENT_MEMORY_LIMIT', 8),
+        'operational_memory_limit' => env('AI_AGENT_OPERATIONAL_MEMORY_LIMIT', 6),
     ],
 
 ];

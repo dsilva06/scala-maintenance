@@ -6,6 +6,11 @@ export async function createConversation(payload = {}) {
   return response?.data;
 }
 
+export async function listConversations() {
+  const response = await httpClient.get("/api/ai/conversations");
+  return response?.data;
+}
+
 export async function sendAiMessage({ conversationId, message, context = {} }) {
   const response = await httpClient.post(`/api/ai/conversations/${conversationId}/messages`, {
     message,
@@ -17,6 +22,11 @@ export async function sendAiMessage({ conversationId, message, context = {} }) {
 
 export async function fetchConversation(conversationId) {
   const response = await httpClient.get(`/api/ai/conversations/${conversationId}`);
+  return response?.data;
+}
+
+export async function deleteConversation(conversationId) {
+  const response = await httpClient.delete(`/api/ai/conversations/${conversationId}`);
   return response?.data;
 }
 

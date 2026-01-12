@@ -101,7 +101,6 @@ class InspectionController extends Controller
         if ($inspection->vehicle_id) {
             $status = match ($inspection->overall_status) {
                 'mantenimiento' => 'fuera_servicio',
-                'revision' => 'mantenimiento',
                 default => null,
             };
 
@@ -113,9 +112,17 @@ class InspectionController extends Controller
         }
 
         // If inspection flagged issues, create a maintenance order so it follows the process
-        if (in_array($inspection->overall_status, ['mantenimiento', 'revision'], true)) {
-            $type = $inspection->overall_status === 'mantenimiento' ? 'correctivo' : 'preventivo';
-            $priority = $inspection->overall_status === 'mantenimiento' ? 'critica' : 'media';
+        if ($inspection->overall_status === 'mantenimiento') {
+            $type = 'correctivo';
+            $priority = 'critica';
+            $hasOpenOrder = MaintenanceOrder::where('user_id', $inspection->user_id)
+                ->where('metadata->inspection_id', $inspection->id)
+                ->whereIn('status', ['pendiente', 'en_progreso'])
+                ->exists();
+
+            if ($hasOpenOrder) {
+                return;
+            }
 
             MaintenanceOrder::create([
                 'user_id' => $inspection->user_id,
@@ -127,6 +134,9 @@ class InspectionController extends Controller
                 'description' => "Generado por inspección ({$inspection->overall_status})",
                 'mechanic' => $inspection->inspector,
                 'notes' => 'Orden creada automáticamente desde inspección.',
+                'metadata' => [
+                    'inspection_id' => $inspection->id,
+                ],
             ]);
         }
     }

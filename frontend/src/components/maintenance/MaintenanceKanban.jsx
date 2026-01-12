@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { GripVertical, Edit, Car, User, Calendar } from 'lucide-react';
+import { GripVertical, Edit, Car, User, Calendar, Gauge } from 'lucide-react';
 import { format } from 'date-fns';
 
 const columns = [
@@ -30,6 +30,10 @@ const columnColors = {
 
 const OrderCard = ({ order, vehicle, onEdit, index }) => {
   const draggableId = order.id?.toString() ?? `order-${index}`;
+  const tasks = Array.isArray(order.tasks) ? order.tasks : [];
+  const taskDescriptions = tasks
+    .map((task) => task?.description || task?.fault || task?.task || "")
+    .filter(Boolean);
   return (
     <Draggable draggableId={draggableId} index={index}>
       {(provided, snapshot) => (
@@ -51,7 +55,20 @@ const OrderCard = ({ order, vehicle, onEdit, index }) => {
                   </div>
                 </div>
               </div>
-              <p className="font-semibold text-sm my-2 text-gray-800">{order.description}</p>
+              {taskDescriptions.length > 0 ? (
+                <div className="space-y-1.5 my-2">
+                  {taskDescriptions.slice(0, 2).map((task, idx) => (
+                    <p key={`${task}-${idx}`} className="text-sm font-semibold text-gray-800">
+                      {task}
+                    </p>
+                  ))}
+                  {taskDescriptions.length > 2 && (
+                    <p className="text-xs text-gray-500">+{taskDescriptions.length - 2} trabajos más</p>
+                  )}
+                </div>
+              ) : (
+                <p className="font-semibold text-sm my-2 text-gray-800">{order.description}</p>
+              )}
               <div className="space-y-1.5 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
                   <Car className="w-3 h-3" />
@@ -65,6 +82,18 @@ const OrderCard = ({ order, vehicle, onEdit, index }) => {
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3 h-3" />
                     <span>{format(new Date(order.scheduled_date), 'dd/MM/yyyy')}</span>
+                  </div>
+                )}
+                {order.status === 'completada' && order.completion_mileage && (
+                  <div className="flex items-center gap-2">
+                    <Gauge className="w-3 h-3" />
+                    <span>{Number(order.completion_mileage).toLocaleString()} km</span>
+                  </div>
+                )}
+                {order.status === 'completada' && order.completion_date && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3" />
+                    <span>Cierre: {format(new Date(order.completion_date), 'dd/MM/yyyy')}</span>
                   </div>
                 )}
               </div>

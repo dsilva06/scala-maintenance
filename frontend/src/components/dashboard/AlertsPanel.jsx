@@ -14,6 +14,23 @@ import {
 import { format } from "date-fns";
 
 export default function AlertsPanel({ alerts }) {
+  const documentLabels = {
+    seguro: "Póliza de Seguro",
+    tarjeta_operacion: "Tarjeta de Operación",
+    revision_tecnica: "Revisión Técnica",
+    soat: "SOAT",
+    permiso_especial: "Permiso Especial",
+    daex: "DAEX",
+    roct: "ROCT",
+    resquimc: "RESQUIMC",
+    racda: "RACDA",
+  };
+
+  const formatDocumentType = (type) => {
+    if (!type) return "Documento";
+    return documentLabels[type] || type.replace(/_/g, " ").toUpperCase();
+  };
+
   if (!alerts) {
     return (
        <Card className="shadow-sm">
@@ -79,7 +96,7 @@ export default function AlertsPanel({ alerts }) {
                 <div key={doc.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">
-                      {doc.document_type.replace(/_/g, ' ')}
+                      {formatDocumentType(doc.document_type)}
                     </p>
                     <p className="text-xs text-gray-500">
                       Vence: {format(new Date(doc.expiration_date), 'dd/MM/yyyy')}

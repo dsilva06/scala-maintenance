@@ -14,6 +14,7 @@ return [
     'context_providers' => [
         App\Services\Mcp\Context\BusinessContextProvider::class,
         App\Services\Mcp\Context\ConversationMemoryProvider::class,
+        App\Services\Mcp\Context\OperationalMemoryProvider::class,
         App\Services\Mcp\Context\SystemSearchProvider::class,
         App\Services\Mcp\Context\PolicyContextProvider::class,
     ],

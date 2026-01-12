@@ -38,6 +38,7 @@ class CreateMaintenanceOrderTool implements ToolInterface
                 'description' => ['type' => 'string'],
                 'mechanic' => ['type' => 'string'],
                 'scheduled_date' => ['type' => 'string', 'format' => 'date-time'],
+                'completion_date' => ['type' => 'string', 'format' => 'date-time'],
                 'completion_mileage' => ['type' => 'integer'],
                 'estimated_cost' => ['type' => 'number'],
                 'notes' => ['type' => 'string'],
@@ -65,6 +66,7 @@ class CreateMaintenanceOrderTool implements ToolInterface
             'description' => ['nullable', 'string'],
             'mechanic' => ['nullable', 'string', 'max:120'],
             'scheduled_date' => ['nullable', 'date'],
+            'completion_date' => ['nullable', 'date'],
             'completion_mileage' => ['nullable', 'integer', 'min:0'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
@@ -110,6 +112,7 @@ class CreateMaintenanceOrderTool implements ToolInterface
 
         if ($order->vehicle_id) {
             $this->refreshVehicleStatus($order->vehicle_id, $user->id);
+            $this->syncVehicleMileageFromOrder($order);
         }
 
         return [
@@ -165,5 +168,35 @@ class CreateMaintenanceOrderTool implements ToolInterface
         Vehicle::where('id', $vehicleId)
             ->where('user_id', $userId)
             ->update(['status' => $newStatus]);
+    }
+
+    protected function syncVehicleMileageFromOrder(MaintenanceOrder $order): void
+    {
+        if ($order->status !== 'completada') {
+            return;
+        }
+
+        if ($order->completion_mileage === null) {
+            return;
+        }
+
+        $vehicle = Vehicle::where('id', $order->vehicle_id)
+            ->where('user_id', $order->user_id)
+            ->first();
+
+        if (! $vehicle) {
+            return;
+        }
+
+        $currentMileage = (int) ($vehicle->current_mileage ?? 0);
+        $newMileage = max($currentMileage, (int) $order->completion_mileage);
+
+        $updates = ['current_mileage' => $newMileage];
+
+        if ($order->completion_date) {
+            $updates['last_service_date'] = $order->completion_date->toDateString();
+        }
+
+        $vehicle->update($updates);
     }
 }
