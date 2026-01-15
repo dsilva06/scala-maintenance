@@ -6,11 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, Map, Plus, Trash2, MapPin, Navigation, Calculator } from "lucide-react";
+import { X, Map, Plus, Trash2, MapPin, Calculator } from "lucide-react";
 import { format } from "date-fns";
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { Driver } from "@/api/entities";
 import LocationSearchInput from "./LocationSearchInput"; // New import for LocationSearchInput
 
 // Configurar iconos de Leaflet
@@ -52,8 +51,8 @@ function MapClickHandler({ onLocationSelect, selectedType }) {
 
 export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    vehicle_id: trip?.vehicle_id || "",
-    driver_id: trip?.driver_id || "",
+    vehicle_id: trip?.vehicle_id ? String(trip.vehicle_id) : "",
+    driver_id: trip?.driver_id ? String(trip.driver_id) : "",
     driver_name: trip?.driver_name || "",
     origin: trip?.origin || "",
     destination: trip?.destination || "",
@@ -68,7 +67,6 @@ export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
     planned_route: trip?.planned_route || []
   });
 
-  const [drivers, setDrivers] = useState([]);
   const [routePoints, setRoutePoints] = useState(trip?.planned_route || []);
   const [mapCenter, setMapCenter] = useState([4.6097, -74.0817]); // Bogotá por defecto
   const [selectedLocationType, setSelectedLocationType] = useState(null);
@@ -76,25 +74,11 @@ export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
   const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
 
   useEffect(() => {
-    loadDrivers();
-  }, []);
-
-  useEffect(() => {
     // Calcular distancia automáticamente cuando se seleccionen ambos puntos
     if (formData.origin_coords && formData.destination_coords) {
       calculateDistance();
     }
   }, [formData.origin_coords, formData.destination_coords]);
-
-  const loadDrivers = async () => {
-    try {
-      const driversData = await Driver.filter({ status: 'activo' });
-      setDrivers(driversData);
-    } catch (error) {
-      console.error("Error loading drivers:", error);
-      setDrivers([]);
-    }
-  };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -118,12 +102,11 @@ export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
     }
   };
 
-  const handleDriverSelect = (driverId) => {
-    const selectedDriver = drivers.find(d => d.id === driverId);
-    setFormData(prev => ({ 
-      ...prev, 
-      driver_id: driverId,
-      driver_name: selectedDriver ? selectedDriver.full_name : ""
+  const handleDriverNameChange = (value) => {
+    setFormData(prev => ({
+      ...prev,
+      driver_name: value,
+      driver_id: "",
     }));
   };
 
@@ -218,13 +201,15 @@ export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
     e.preventDefault();
     
     // Validación básica
-    if (!formData.vehicle_id || !formData.driver_id || !formData.origin || !formData.destination) {
+    if (!formData.vehicle_id || !formData.driver_name || !formData.origin || !formData.destination) {
       alert("Por favor completa todos los campos requeridos");
       return;
     }
 
     onSubmit({
       ...formData,
+      vehicle_id: formData.vehicle_id ? Number(formData.vehicle_id) : null,
+      driver_id: formData.driver_id || null,
       planned_route: routePoints.filter(point => point.address.trim() !== "")
     });
   };
@@ -253,7 +238,7 @@ export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
                   </SelectTrigger>
                   <SelectContent>
                     {vehicles.filter(v => v.status === 'activo').map(v => (
-                      <SelectItem key={v.id} value={v.id}>
+                      <SelectItem key={v.id} value={String(v.id)}>
                         {v.plate} - {v.brand} {v.model}
                       </SelectItem>
                     ))}
@@ -261,19 +246,13 @@ export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="driver_id">Conductor *</Label>
-                <Select value={formData.driver_id} onValueChange={handleDriverSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar conductor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {drivers.map(driver => (
-                      <SelectItem key={driver.id} value={driver.id}>
-                        {driver.full_name} - Licencia: {driver.license_category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="driver_name">Conductor *</Label>
+                <Input
+                  id="driver_name"
+                  placeholder="Nombre del conductor"
+                  value={formData.driver_name}
+                  onChange={(e) => handleDriverNameChange(e.target.value)}
+                />
               </div>
             </div>
 

@@ -1,3 +1,4 @@
+import { apiPath } from './apiPath';
 import { httpClient } from './httpClient';
 
 function buildQuery(params = {}) {
@@ -15,25 +16,25 @@ function buildQuery(params = {}) {
 
 export async function listMaintenanceOrders(params = {}) {
   const query = buildQuery(params);
-  const response = await httpClient.get(`/api/maintenance-orders${query ? `?${query}` : ''}`);
+  const response = await httpClient.get(`${apiPath('maintenance-orders')}${query ? `?${query}` : ''}`);
   return response?.data ?? [];
 }
 
 export async function createMaintenanceOrder(payload) {
-  const response = await httpClient.post('/api/maintenance-orders', payload);
+  const response = await httpClient.post(apiPath('maintenance-orders'), payload);
   return response?.data ?? response;
 }
 
 export async function getMaintenanceOrder(id) {
-  const response = await httpClient.get(`/api/maintenance-orders/${id}`);
+  const response = await httpClient.get(apiPath(`maintenance-orders/${id}`));
   return response?.data ?? response;
 }
 
 export async function updateMaintenanceOrder(id, payload) {
-  const response = await httpClient.patch(`/api/maintenance-orders/${id}`, payload);
+  const response = await httpClient.patch(apiPath(`maintenance-orders/${id}`), payload);
   return response?.data ?? response;
 }
 
 export async function deleteMaintenanceOrder(id) {
-  await httpClient.delete(`/api/maintenance-orders/${id}`);
+  await httpClient.delete(apiPath(`maintenance-orders/${id}`));
 }

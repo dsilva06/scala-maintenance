@@ -25,10 +25,12 @@ import AlertsPanel from "../components/dashboard/AlertsPanel";
 import AIInsights from "../components/dashboard/AIInsights";
 import SmartFlowWidget from "../components/dashboard/SmartFlowWidget"; // New component for Smart Flow
 import AIAssistantPanel from "../components/ai/AIAssistantPanel";
+import AnalyticsOverview from "../components/dashboard/AnalyticsOverview";
 
 // Configuración de widgets por defecto
 const defaultWidgets = [
   { id: 'stats', name: 'Estadísticas Principales' },
+  { id: 'analytics', name: 'Indicadores Operativos' },
   { id: 'fleet-status', name: 'Estado de la Flota' },
   { id: 'alerts', name: 'Alertas' },
   { id: 'maintenance-calendar', name: 'Próximos Mantenimientos' },
@@ -82,7 +84,8 @@ export default function Dashboard() {
       const orderedWidgets = savedOrder
         .map(id => defaultWidgets.find(w => w.id === id))
         .filter(Boolean); // Filtrar por si un widget ya no existe
-      setWidgets(orderedWidgets);
+      const missingWidgets = defaultWidgets.filter(widget => !savedOrder.includes(widget.id));
+      setWidgets([...orderedWidgets, ...missingWidgets]);
     }
   };
 
@@ -230,6 +233,8 @@ export default function Dashboard() {
               </Link>
             </div>
           );
+        case 'analytics':
+          return <AnalyticsOverview />;
 
         case 'fleet-status':
           return (

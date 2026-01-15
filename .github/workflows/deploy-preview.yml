@@ -1,0 +1,21 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  deploy-preview:
+    if: ${{ secrets.PREVIEW_DEPLOY_PROVIDER != '' && secrets.PREVIEW_DEPLOY_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Deploy preview
+        run: ./scripts/deploy-preview.sh
+        env:
+          PREVIEW_DEPLOY_PROVIDER: ${{ secrets.PREVIEW_DEPLOY_PROVIDER }}
+          PREVIEW_DEPLOY_TOKEN: ${{ secrets.PREVIEW_DEPLOY_TOKEN }}
+          PREVIEW_REF: ${{ github.ref_name }}
+          PREVIEW_SHA: ${{ github.sha }}

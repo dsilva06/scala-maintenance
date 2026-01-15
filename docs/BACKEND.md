@@ -53,6 +53,58 @@ php artisan serve --host=127.0.0.1 --port=8000
   `php artisan queue:table` and `php artisan session:table` followed by
   `php artisan migrate` if you plan to use queues/sessions right away.
 
+## API versioning
+
+- Legacy routes live under `/api`.
+- Versioned routes live under `/api/v1` for stable client contracts.
+- Use `VITE_API_VERSION=v1` in the frontend to switch over.
+- OpenAPI contract lives at `docs/openapi.yaml`.
+
+## Queues & Horizon
+
+- Horizon is installed for queue monitoring.
+- Start workers with `php artisan horizon`.
+- For local dev, ensure `QUEUE_CONNECTION=database` and run migrations:
+  `php artisan queue:table && php artisan migrate`.
+- Horizon requires Redis for metrics/state; configure `REDIS_HOST` for non-Docker setups.
+
+## Async jobs
+
+- Queue reports: `php artisan reports:generate {userId} --type=fleet-summary`
+- Queue imports: `php artisan imports:process {userId} {path}`
+- Queue alert processing: `php artisan alerts:process {alertId}`
+- Queue ETA recompute: `php artisan trips:recompute-eta {tripId}`
+
+## Observability
+
+- Logs default to JSON on stderr (`LOG_STACK=stderr`, `LOG_STDERR_FORMATTER=Monolog\\Formatter\\JsonFormatter`).
+- Sentry: set `SENTRY_DSN`, and optionally `SENTRY_TRACES_SAMPLE_RATE`.
+- To send log events to Sentry, add `sentry` to `LOG_STACK`.
+- OpenTelemetry: set `OTEL_ENABLED=true` and configure `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+## Tenancy & RBAC
+
+- All domain tables include `company_id` and queries are scoped by company.
+- Roles supported: `admin`, `manager`, `employee`, `driver`.
+- Drivers are read-only and can only access their own records; other roles can manage company data.
+- Audit logs are stored in `audit_logs` and capture create/update/delete actions with before/after snapshots.
+
+## Telemetry & Realtime
+
+- GPS positions are stored in `gps_positions` and indexed by company/trip/vehicle/time.
+- Ingest telemetry at `POST /api/telemetry/ingest` (queued for background processing).
+- Subscribe to realtime GPS updates via `GET /api/telemetry/stream` (SSE).
+- Tunables (in `.env`): `FLEET_TELEMETRY_MAX_POINTS`, `FLEET_POSITION_HISTORY_LIMIT`,
+  `FLEET_TELEMETRY_STREAM_SLEEP_MS`, `FLEET_TELEMETRY_STREAM_TIMEOUT_SECONDS`.
+
+## Analytics & BI
+
+- Usage events are ingested via `POST /api/analytics/events` (queued).
+- Event summaries: `GET /api/analytics/events/summary` (admin/manager).
+- Operational metrics: `GET /api/analytics/metrics` (cost per mile, downtime, ETA accuracy).
+- Tunables (in `.env`): `ANALYTICS_ENABLED`, `ANALYTICS_MAX_EVENTS`, `ANALYTICS_DEFAULT_RANGE_DAYS`.
+- ETA accuracy relies on `trips.metadata.actual_arrival` or `trips.metadata.actual_arrival_at`.
+
 
 ## Project structure
 

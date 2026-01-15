@@ -1,3 +1,4 @@
+import { apiPath } from './apiPath';
 import { httpClient } from './httpClient';
 
 function buildQuery(params = {}) {
@@ -43,27 +44,27 @@ function createVehicleClient() {
     }
 
     const query = buildQuery(params);
-    const response = await httpClient.get(`/api/vehicles${query ? `?${query}` : ''}`);
+    const response = await httpClient.get(`${apiPath('vehicles')}${query ? `?${query}` : ''}`);
     return response?.data ?? [];
   };
 
   const get = async (id) => {
-    const response = await httpClient.get(`/api/vehicles/${id}`);
+    const response = await httpClient.get(apiPath(`vehicles/${id}`));
     return response?.data ?? response;
   };
 
   const create = async (payload) => {
-    const response = await httpClient.post('/api/vehicles', payload);
+    const response = await httpClient.post(apiPath('vehicles'), payload);
     return response?.data ?? response;
   };
 
   const update = async (id, payload) => {
-    const response = await httpClient.patch(`/api/vehicles/${id}`, payload);
+    const response = await httpClient.patch(apiPath(`vehicles/${id}`), payload);
     return response?.data ?? response;
   };
 
   const destroy = async (id) => {
-    await httpClient.delete(`/api/vehicles/${id}`);
+    await httpClient.delete(apiPath(`vehicles/${id}`));
     return null;
   };
 
@@ -98,27 +99,27 @@ function createInspectionClient() {
     }
 
     const query = buildQuery(params);
-    const response = await httpClient.get(`/api/inspections${query ? `?${query}` : ''}`);
+    const response = await httpClient.get(`${apiPath('inspections')}${query ? `?${query}` : ''}`);
     return response?.data ?? [];
   };
 
   const get = async (id) => {
-    const response = await httpClient.get(`/api/inspections/${id}`);
+    const response = await httpClient.get(apiPath(`inspections/${id}`));
     return response?.data ?? response;
   };
 
   const create = async (payload) => {
-    const response = await httpClient.post('/api/inspections', payload);
+    const response = await httpClient.post(apiPath('inspections'), payload);
     return response?.data ?? response;
   };
 
   const update = async (id, payload) => {
-    const response = await httpClient.patch(`/api/inspections/${id}`, payload);
+    const response = await httpClient.patch(apiPath(`inspections/${id}`), payload);
     return response?.data ?? response;
   };
 
   const destroy = async (id) => {
-    await httpClient.delete(`/api/inspections/${id}`);
+    await httpClient.delete(apiPath(`inspections/${id}`));
     return null;
   };
 
@@ -153,27 +154,27 @@ function createSparePartClient() {
     }
 
     const query = buildQuery(params);
-    const response = await httpClient.get(`/api/spare-parts${query ? `?${query}` : ''}`);
+    const response = await httpClient.get(`${apiPath('spare-parts')}${query ? `?${query}` : ''}`);
     return response?.data ?? [];
   };
 
   const get = async (id) => {
-    const response = await httpClient.get(`/api/spare-parts/${id}`);
+    const response = await httpClient.get(apiPath(`spare-parts/${id}`));
     return response?.data ?? response;
   };
 
   const create = async (payload) => {
-    const response = await httpClient.post('/api/spare-parts', payload);
+    const response = await httpClient.post(apiPath('spare-parts'), payload);
     return response?.data ?? response;
   };
 
   const update = async (id, payload) => {
-    const response = await httpClient.patch(`/api/spare-parts/${id}`, payload);
+    const response = await httpClient.patch(apiPath(`spare-parts/${id}`), payload);
     return response?.data ?? response;
   };
 
   const destroy = async (id) => {
-    await httpClient.delete(`/api/spare-parts/${id}`);
+    await httpClient.delete(apiPath(`spare-parts/${id}`));
     return null;
   };
 
@@ -209,27 +210,83 @@ function createPurchaseOrderClient() {
     }
 
     const query = buildQuery(params);
-    const response = await httpClient.get(`/api/purchase-orders${query ? `?${query}` : ''}`);
+    const response = await httpClient.get(`${apiPath('purchase-orders')}${query ? `?${query}` : ''}`);
     return response?.data ?? [];
   };
 
   const get = async (id) => {
-    const response = await httpClient.get(`/api/purchase-orders/${id}`);
+    const response = await httpClient.get(apiPath(`purchase-orders/${id}`));
     return response?.data ?? response;
   };
 
   const create = async (payload) => {
-    const response = await httpClient.post('/api/purchase-orders', payload);
+    const response = await httpClient.post(apiPath('purchase-orders'), payload);
     return response?.data ?? response;
   };
 
   const update = async (id, payload) => {
-    const response = await httpClient.patch(`/api/purchase-orders/${id}`, payload);
+    const response = await httpClient.patch(apiPath(`purchase-orders/${id}`), payload);
     return response?.data ?? response;
   };
 
   const destroy = async (id) => {
-    await httpClient.delete(`/api/purchase-orders/${id}`);
+    await httpClient.delete(apiPath(`purchase-orders/${id}`));
+    return null;
+  };
+
+  return {
+    list,
+    filter: (params = {}) => list(params),
+    get,
+    create,
+    update,
+    delete: destroy,
+  };
+}
+
+function createTripClient() {
+  const sortMap = {
+    created_date: 'created_at',
+    updated_date: 'updated_at',
+    start_date: 'start_date',
+    estimated_arrival: 'estimated_arrival',
+  };
+
+  const list = async (sortOrParams, limit) => {
+    const params =
+      typeof sortOrParams === 'object' && sortOrParams !== null
+        ? { ...sortOrParams }
+        : {
+            sort: sortOrParams,
+            ...(limit ? { limit } : {}),
+          };
+
+    if (params.sort) {
+      params.sort = normalizeSort(params.sort, sortMap);
+    }
+
+    const query = buildQuery(params);
+    const response = await httpClient.get(`${apiPath('trips')}${query ? `?${query}` : ''}`);
+    return response?.data ?? [];
+  };
+
+  const get = async (id) => {
+    const response = await httpClient.get(apiPath(`trips/${id}`));
+    return response?.data ?? response;
+  };
+
+  const create = async (payload) => {
+    const response = await httpClient.post(apiPath('trips'), payload);
+    return response?.data ?? response;
+  };
+
+  const update = async (id, payload) => {
+    const response = await httpClient.patch(apiPath(`trips/${id}`), payload);
+    return response?.data ?? response;
+  };
+
+  const destroy = async (id) => {
+    await httpClient.delete(apiPath(`trips/${id}`));
     return null;
   };
 
@@ -264,27 +321,27 @@ function createSupplierClient() {
     }
 
     const query = buildQuery(params);
-    const response = await httpClient.get(`/api/suppliers${query ? `?${query}` : ''}`);
+    const response = await httpClient.get(`${apiPath('suppliers')}${query ? `?${query}` : ''}`);
     return response?.data ?? [];
   };
 
   const get = async (id) => {
-    const response = await httpClient.get(`/api/suppliers/${id}`);
+    const response = await httpClient.get(apiPath(`suppliers/${id}`));
     return response?.data ?? response;
   };
 
   const create = async (payload) => {
-    const response = await httpClient.post('/api/suppliers', payload);
+    const response = await httpClient.post(apiPath('suppliers'), payload);
     return response?.data ?? response;
   };
 
   const update = async (id, payload) => {
-    const response = await httpClient.patch(`/api/suppliers/${id}`, payload);
+    const response = await httpClient.patch(apiPath(`suppliers/${id}`), payload);
     return response?.data ?? response;
   };
 
   const destroy = async (id) => {
-    await httpClient.delete(`/api/suppliers/${id}`);
+    await httpClient.delete(apiPath(`suppliers/${id}`));
     return null;
   };
 
@@ -326,7 +383,7 @@ export const apiClient = {
     Supplier: createSupplierClient(),
     Document: createPlaceholderEntity('Document'),
     RepairGuide: createPlaceholderEntity('RepairGuide'),
-    Trip: createPlaceholderEntity('Trip'),
+    Trip: createTripClient(),
     Alert: createPlaceholderEntity('Alert'),
     Driver: createPlaceholderEntity('Driver'),
   },

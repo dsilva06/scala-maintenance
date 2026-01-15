@@ -1,0 +1,1377 @@
+openapi: 3.0.3
+info:
+  title: FLOTA API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+security:
+  - sanctum: []
+
+paths:
+  /vehicles:
+    get:
+      summary: List vehicles
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create vehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /vehicles/{id}:
+    get:
+      summary: Get vehicle
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update vehicle
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+    delete:
+      summary: Delete vehicle
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /trips:
+    get:
+      summary: List trips
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/status'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripCollection'
+    post:
+      summary: Create trip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Trip'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripResponse'
+  /trips/{id}:
+    get:
+      summary: Get trip
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripResponse'
+    patch:
+      summary: Update trip
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Trip'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripResponse'
+    delete:
+      summary: Delete trip
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /telemetry/ingest:
+    post:
+      summary: Ingest telemetry points
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryIngestRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryIngestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /telemetry/stream:
+    get:
+      summary: Stream telemetry positions (SSE)
+      parameters:
+        - $ref: '#/components/parameters/trip_id'
+        - $ref: '#/components/parameters/vehicle_id'
+        - $ref: '#/components/parameters/last_id'
+        - $ref: '#/components/parameters/last_event_id'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |-
+                id: 120
+                event: gps.position
+                data: {"id":120,"trip_id":12,"vehicle_id":3,"position":{"lat":19.43,"lng":-99.13,"speed_kph":72,"heading":182,"recorded_at":"2025-01-10T15:22:01Z"}}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analytics/events:
+    post:
+      summary: Ingest analytics events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsEventBatch'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsIngestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /analytics/events/summary:
+    get:
+      summary: Summarize analytics events
+      parameters:
+        - $ref: '#/components/parameters/start_date'
+        - $ref: '#/components/parameters/end_date'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsEventSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /analytics/metrics:
+    get:
+      summary: Fetch operational analytics metrics
+      parameters:
+        - $ref: '#/components/parameters/start_date'
+        - $ref: '#/components/parameters/end_date'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsMetricsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /maintenance-orders:
+    get:
+      summary: List maintenance orders
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/vehicle_id'
+        - $ref: '#/components/parameters/month'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceOrderCollection'
+    post:
+      summary: Create maintenance order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceOrder'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceOrderResponse'
+  /maintenance-orders/{id}:
+    get:
+      summary: Get maintenance order
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceOrderResponse'
+    patch:
+      summary: Update maintenance order
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceOrderResponse'
+    delete:
+      summary: Delete maintenance order
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /inspections:
+    get:
+      summary: List inspections
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/vehicle_id'
+        - $ref: '#/components/parameters/month'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionCollection'
+    post:
+      summary: Create inspection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inspection'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionResponse'
+  /inspections/{id}:
+    get:
+      summary: Get inspection
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionResponse'
+    patch:
+      summary: Update inspection
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inspection'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionResponse'
+    delete:
+      summary: Delete inspection
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /spare-parts:
+    get:
+      summary: List spare parts
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/category'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SparePartCollection'
+    post:
+      summary: Create spare part
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SparePart'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SparePartResponse'
+  /spare-parts/{id}:
+    get:
+      summary: Get spare part
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SparePartResponse'
+    patch:
+      summary: Update spare part
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SparePart'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SparePartResponse'
+    delete:
+      summary: Delete spare part
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /purchase-orders:
+    get:
+      summary: List purchase orders
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/month'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrderCollection'
+    post:
+      summary: Create purchase order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrder'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrderResponse'
+  /purchase-orders/{id}:
+    get:
+      summary: Get purchase order
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrderResponse'
+    patch:
+      summary: Update purchase order
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrder'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrderResponse'
+    delete:
+      summary: Delete purchase order
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /suppliers:
+    get:
+      summary: List suppliers
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCollection'
+    post:
+      summary: Create supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Supplier'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierResponse'
+  /suppliers/{id}:
+    get:
+      summary: Get supplier
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierResponse'
+    patch:
+      summary: Update supplier
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Supplier'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierResponse'
+    delete:
+      summary: Delete supplier
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /documents:
+    get:
+      summary: List documents
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/vehicle_id'
+        - $ref: '#/components/parameters/document_type'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentCollection'
+    post:
+      summary: Create document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+  /documents/{id}:
+    get:
+      summary: Get document
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+    patch:
+      summary: Update document
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+    delete:
+      summary: Delete document
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /repair-guides:
+    get:
+      summary: List repair guides
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/category'
+        - $ref: '#/components/parameters/type'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairGuideCollection'
+    post:
+      summary: Create repair guide
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepairGuide'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairGuideResponse'
+  /repair-guides/{id}:
+    get:
+      summary: Get repair guide
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairGuideResponse'
+    patch:
+      summary: Update repair guide
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepairGuide'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairGuideResponse'
+    delete:
+      summary: Delete repair guide
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+  /alerts:
+    get:
+      summary: List alerts
+      parameters:
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/type'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertCollection'
+    post:
+      summary: Create alert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Alert'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertResponse'
+  /alerts/{id}:
+    get:
+      summary: Get alert
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertResponse'
+    patch:
+      summary: Update alert
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Alert'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertResponse'
+    delete:
+      summary: Delete alert
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: No Content
+
+components:
+  securitySchemes:
+    sanctum:
+      type: apiKey
+      in: cookie
+      name: XSRF-TOKEN
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+    search:
+      name: search
+      in: query
+      schema:
+        type: string
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+    status:
+      name: status
+      in: query
+      schema:
+        type: string
+    month:
+      name: month
+      in: query
+      schema:
+        type: string
+        example: '2025-01'
+    vehicle_id:
+      name: vehicle_id
+      in: query
+      schema:
+        type: integer
+    trip_id:
+      name: trip_id
+      in: query
+      schema:
+        type: integer
+    last_id:
+      name: last_id
+      in: query
+      schema:
+        type: integer
+    last_event_id:
+      name: Last-Event-ID
+      in: header
+      schema:
+        type: integer
+    start_date:
+      name: start_date
+      in: query
+      schema:
+        type: string
+        format: date
+    end_date:
+      name: end_date
+      in: query
+      schema:
+        type: string
+        format: date
+    category:
+      name: category
+      in: query
+      schema:
+        type: string
+    type:
+      name: type
+      in: query
+      schema:
+        type: string
+    document_type:
+      name: document_type
+      in: query
+      schema:
+        type: string
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: integer
+            details:
+              type: object
+              additionalProperties: true
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+        plate:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        status:
+          type: string
+      additionalProperties: true
+    VehicleResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Vehicle'
+    VehicleCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vehicle'
+    Trip:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        driver_name:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        status:
+          type: string
+        current_position:
+          $ref: '#/components/schemas/TripPosition'
+        position_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/TripPosition'
+      additionalProperties: true
+    TripResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Trip'
+    TripCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trip'
+    TripPosition:
+      type: object
+      properties:
+        id:
+          type: integer
+        lat:
+          type: number
+          format: float
+        lng:
+          type: number
+          format: float
+        speed_kph:
+          type: number
+          format: float
+        heading:
+          type: number
+          format: float
+        recorded_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+    TelemetryPoint:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          format: float
+        lng:
+          type: number
+          format: float
+        speed_kph:
+          type: number
+          format: float
+        heading:
+          type: number
+          format: float
+        altitude:
+          type: number
+          format: float
+        accuracy:
+          type: number
+          format: float
+        recorded_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+    TelemetryIngestRequest:
+      type: object
+      description: Provide vehicle_id or trip_id with at least one point.
+      required:
+        - points
+      properties:
+        vehicle_id:
+          type: integer
+        trip_id:
+          type: integer
+        source:
+          type: string
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryPoint'
+      additionalProperties: true
+    TelemetryIngestResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            queued:
+              type: boolean
+            points:
+              type: integer
+          additionalProperties: true
+      additionalProperties: true
+    AnalyticsEvent:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: integer
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+        source:
+          type: string
+      additionalProperties: true
+    AnalyticsEventBatch:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsEvent'
+      additionalProperties: true
+    AnalyticsIngestResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            queued:
+              type: boolean
+            events:
+              type: integer
+          additionalProperties: true
+      additionalProperties: true
+    AnalyticsEventSummary:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            range:
+              type: object
+              properties:
+                start_date:
+                  type: string
+                end_date:
+                  type: string
+            total_events:
+              type: integer
+            unique_users:
+              type: integer
+            events:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  total:
+                    type: integer
+    AnalyticsMetricsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            range:
+              type: object
+              properties:
+                start_date:
+                  type: string
+                end_date:
+                  type: string
+            metrics:
+              type: object
+              properties:
+                cost_per_mile:
+                  type: object
+                  properties:
+                    value:
+                      type: number
+                      format: float
+                    total_cost:
+                      type: number
+                      format: float
+                    total_distance:
+                      type: number
+                      format: float
+                downtime_hours:
+                  type: object
+                  properties:
+                    average:
+                      type: number
+                      format: float
+                    total:
+                      type: number
+                      format: float
+                    orders:
+                      type: integer
+                eta_accuracy:
+                  type: object
+                  properties:
+                    average_error_minutes:
+                      type: number
+                      format: float
+                    trips:
+                      type: integer
+                    within_15_min_rate:
+                      type: number
+                      format: float
+    MaintenanceOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        order_number:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+      additionalProperties: true
+    MaintenanceOrderResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MaintenanceOrder'
+    MaintenanceOrderCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceOrder'
+    Inspection:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        inspector:
+          type: string
+        overall_status:
+          type: string
+        inspection_date:
+          type: string
+          format: date-time
+      additionalProperties: true
+    InspectionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Inspection'
+    InspectionCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Inspection'
+    SparePart:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+        current_stock:
+          type: integer
+        status:
+          type: string
+      additionalProperties: true
+    SparePartResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SparePart'
+    SparePartCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SparePart'
+    PurchaseOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        order_number:
+          type: string
+        supplier:
+          type: string
+        status:
+          type: string
+        expected_date:
+          type: string
+          format: date-time
+      additionalProperties: true
+    PurchaseOrderResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PurchaseOrder'
+    PurchaseOrderCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseOrder'
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contact_name:
+          type: string
+        email:
+          type: string
+      additionalProperties: true
+    SupplierResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Supplier'
+    SupplierCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Supplier'
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        document_type:
+          type: string
+        status:
+          type: string
+        expiration_date:
+          type: string
+          format: date
+      additionalProperties: true
+    DocumentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Document'
+    DocumentCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+    RepairGuide:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        type:
+          type: string
+        priority:
+          type: string
+      additionalProperties: true
+    RepairGuideResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RepairGuide'
+    RepairGuideCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepairGuide'
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        severity:
+          type: string
+      additionalProperties: true
+    AlertResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Alert'
+    AlertCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'

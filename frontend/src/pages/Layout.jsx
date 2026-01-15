@@ -25,6 +25,7 @@ import { Document } from "@/api/entities";
 import { listMaintenanceOrders } from "@/api/maintenanceOrders";
 import { listSpareParts } from "@/api/spareParts";
 import { useAuth } from "@/auth/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 
 const ADMIN_ONLY = ["admin"];
 const ADMIN_EMPLOYEE = ["admin", "employee"];
@@ -114,6 +115,15 @@ export default function Layout() {
   useEffect(() => {
     loadAlerts();
   }, []);
+
+  useEffect(() => {
+    trackEvent('page.view', {
+      path: location.pathname,
+      role: userRole,
+    }, {
+      category: 'navigation',
+    });
+  }, [location.pathname, userRole]);
   
   const loadAlerts = async () => {
     setIsLoadingAlerts(true);
