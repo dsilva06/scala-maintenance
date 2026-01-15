@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.9",
         "open-telemetry/exporter-otlp": "^1.3",
         "open-telemetry/opentelemetry": "^1.0",
+        "php-http/httplug": "^2.4",
         "sentry/sentry-laravel": "^4.20"
     },
     "require-dev": {
@@ -71,6 +72,9 @@
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
             "tbachert/spi": true
+        },
+        "platform": {
+            "php": "8.2"
         }
     },
     "minimum-stability": "stable",
