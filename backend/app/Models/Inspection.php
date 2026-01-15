@@ -12,6 +12,7 @@ class Inspection extends Model
 
     protected $fillable = [
         'user_id',
+        'company_id',
         'vehicle_id',
         'inspection_date',
         'inspector',
@@ -34,6 +35,11 @@ class Inspection extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function vehicle()

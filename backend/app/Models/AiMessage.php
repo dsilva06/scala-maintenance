@@ -13,6 +13,7 @@ class AiMessage extends Model
     protected $fillable = [
         'conversation_id',
         'user_id',
+        'company_id',
         'role',
         'content',
         'provider',
@@ -37,5 +38,10 @@ class AiMessage extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 }

@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class PurchaseOrderUpdateRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,16 +17,13 @@ class PurchaseOrderUpdateRequest extends FormRequest
     public function rules(): array
     {
         $purchaseOrder = $this->route('purchase_order');
-        $userId = $this->user()?->id;
 
         return [
             'order_number' => [
                 'sometimes',
                 'string',
                 'max:120',
-                Rule::unique('purchase_orders', 'order_number')
-                    ->where('user_id', $userId)
-                    ->ignore($purchaseOrder?->id),
+                $this->uniqueForUserCompany('purchase_orders', 'order_number', $purchaseOrder?->id),
             ],
             'product_name' => ['sometimes', 'string', 'max:150'],
             'supplier' => ['sometimes', 'nullable', 'string', 'max:150'],
@@ -32,7 +31,7 @@ class PurchaseOrderUpdateRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'integer',
-                Rule::exists('suppliers', 'id')->where('user_id', $userId),
+                $this->existsForUserCompany('suppliers', 'id'),
             ],
             'status' => ['sometimes', 'string', 'max:50'],
             'priority' => ['sometimes', 'string', 'max:50'],
@@ -43,7 +42,7 @@ class PurchaseOrderUpdateRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'integer',
-                Rule::exists('spare_parts', 'id')->where('user_id', $userId),
+                $this->existsForUserCompany('spare_parts', 'id'),
             ],
             'notes' => ['sometimes', 'nullable', 'string'],
             'metadata' => ['sometimes', 'nullable', 'array'],

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\McpInvokeRequest;
 use App\Services\Mcp\McpServer;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class McpController extends Controller
 {
@@ -17,13 +17,11 @@ class McpController extends Controller
         ]);
     }
 
-    public function invoke(Request $request, McpServer $server, string $tool): JsonResponse
+    public function invoke(McpInvokeRequest $request, McpServer $server, string $tool): JsonResponse
     {
         $this->ensureEnabled();
 
-        $validated = $request->validate([
-            'arguments' => ['nullable', 'array'],
-        ]);
+        $validated = $request->validated();
 
         $result = $server->callTool($tool, $validated['arguments'] ?? [], $request->user());
 

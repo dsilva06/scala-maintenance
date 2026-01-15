@@ -2,82 +2,63 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Actions\Alerts\CreateAlert;
+use App\Actions\Alerts\DeleteAlert;
+use App\Actions\Alerts\UpdateAlert;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
+use App\Http\Resources\AlertResource;
 use App\Models\Alert;
+use App\Queries\Alerts\AlertIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Requests\AlertStoreRequest;
 use App\Http\Requests\AlertUpdateRequest;
 
 class AlertController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
-    public function index(Request $request)
+    public function index(Request $request, AlertIndexQuery $alertIndexQuery)
     {
-        $query = Alert::query()
-            ->where('user_id', $request->user()->id);
+        $alerts = $alertIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        if ($type = $request->query('type')) {
-            $query->where('type', $type);
-        }
-
-        if ($status = $request->query('status')) {
-            $query->where('status', $status);
-        }
-
-        $this->applyQueryOptions($request, $query, [
-            'created_at', 'severity', 'status',
-        ], [
-            'title', 'description', 'type', 'severity',
-        ]);
-
-        return JsonResource::collection($query->get());
+        return AlertResource::collection($alerts);
     }
 
-    public function store(AlertStoreRequest $request)
+    public function store(AlertStoreRequest $request, CreateAlert $createAlert)
     {
-        $user = $request->user();
+        $this->authorizeCompanyWrite($request);
+        $alert = $createAlert->handle($request->user(), $request->validated());
 
-        $validated = $request->validated();
-
-        $alert = $user->alerts()->create($validated);
-
-        return JsonResource::make($alert)->response()->setStatusCode(201);
+        return AlertResource::make($alert)->response()->setStatusCode(201);
     }
 
     public function show(Request $request, Alert $alert)
     {
-        $this->authorizeResource($request, $alert);
+        $this->authorizeCompanyRead($request, $alert);
 
-        return JsonResource::make($alert);
+        return AlertResource::make($alert);
     }
 
-    public function update(AlertUpdateRequest $request, Alert $alert)
+    public function update(AlertUpdateRequest $request, Alert $alert, UpdateAlert $updateAlert)
     {
-        $this->authorizeResource($request, $alert);
+        $this->authorizeCompanyRead($request, $alert);
+        $this->authorizeCompanyWrite($request);
 
-        $validated = $request->validated();
+        $alert = $updateAlert->handle($request->user(), $alert, $request->validated());
 
-        $alert->update($validated);
-
-        return JsonResource::make($alert);
+        return AlertResource::make($alert);
     }
 
-    public function destroy(Request $request, Alert $alert)
+    public function destroy(Request $request, Alert $alert, DeleteAlert $deleteAlert)
     {
-        $this->authorizeResource($request, $alert);
+        $this->authorizeCompanyRead($request, $alert);
+        $this->authorizeCompanyWrite($request);
 
-        $alert->delete();
+        $deleteAlert->handle($request->user(), $alert);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeResource(Request $request, Alert $alert): void
-    {
-        if ($alert->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
     }
 }

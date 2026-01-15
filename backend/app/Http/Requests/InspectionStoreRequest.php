@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class InspectionStoreRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -14,7 +17,10 @@ class InspectionStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'vehicle_id' => ['required', 'exists:vehicles,id'],
+            'vehicle_id' => [
+                'required',
+                $this->existsForUserCompany('vehicles', 'id'),
+            ],
             'inspection_date' => ['required', 'date'],
             'inspector' => ['required', 'string', 'max:120'],
             'mileage' => ['required', 'integer', 'min:0'],

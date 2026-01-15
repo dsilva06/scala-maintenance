@@ -2,87 +2,63 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Actions\Documents\CreateDocument;
+use App\Actions\Documents\DeleteDocument;
+use App\Actions\Documents\UpdateDocument;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
 use App\Models\Document;
+use App\Queries\Documents\DocumentIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Requests\DocumentStoreRequest;
 use App\Http\Requests\DocumentUpdateRequest;
+use App\Http\Resources\DocumentResource;
 
 class DocumentController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
-    public function index(Request $request)
+    public function index(Request $request, DocumentIndexQuery $documentIndexQuery)
     {
-        $query = Document::query()
-            ->with('vehicle')
-            ->where('user_id', $request->user()->id);
+        $documents = $documentIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        if ($vehicleId = $request->query('vehicle_id')) {
-            $query->where('vehicle_id', $vehicleId);
-        }
-
-        if ($type = $request->query('document_type')) {
-            $query->where('document_type', $type);
-        }
-
-        if ($status = $request->query('status')) {
-            $query->where('status', $status);
-        }
-
-        $this->applyQueryOptions($request, $query, [
-            'expiration_date', 'created_at', 'document_type',
-        ], [
-            'document_number', 'issuing_entity', 'document_type',
-        ]);
-
-        return JsonResource::collection($query->get());
+        return DocumentResource::collection($documents);
     }
 
-    public function store(DocumentStoreRequest $request)
+    public function store(DocumentStoreRequest $request, CreateDocument $createDocument)
     {
-        $user = $request->user();
+        $this->authorizeCompanyWrite($request);
+        $document = $createDocument->handle($request->user(), $request->validated());
 
-        $validated = $request->validated();
-
-        $document = $user->documents()->create($validated);
-
-        return JsonResource::make($document->load('vehicle'))->response()->setStatusCode(201);
+        return DocumentResource::make($document->load('vehicle'))->response()->setStatusCode(201);
     }
 
     public function show(Request $request, Document $document)
     {
-        $this->authorizeResource($request, $document);
+        $this->authorizeCompanyRead($request, $document);
 
-        return JsonResource::make($document->load('vehicle'));
+        return DocumentResource::make($document->load('vehicle'));
     }
 
-    public function update(DocumentUpdateRequest $request, Document $document)
+    public function update(DocumentUpdateRequest $request, Document $document, UpdateDocument $updateDocument)
     {
-        $this->authorizeResource($request, $document);
+        $this->authorizeCompanyRead($request, $document);
+        $this->authorizeCompanyWrite($request);
 
-        $validated = $request->validated();
+        $document = $updateDocument->handle($request->user(), $document, $request->validated());
 
-        $document->update($validated);
-
-        return JsonResource::make($document->load('vehicle'));
+        return DocumentResource::make($document->load('vehicle'));
     }
 
-    public function destroy(Request $request, Document $document)
+    public function destroy(Request $request, Document $document, DeleteDocument $deleteDocument)
     {
-        $this->authorizeResource($request, $document);
+        $this->authorizeCompanyRead($request, $document);
+        $this->authorizeCompanyWrite($request);
 
-        $document->delete();
+        $deleteDocument->handle($request->user(), $document);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeResource(Request $request, Document $document): void
-    {
-        if ($document->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
     }
 }

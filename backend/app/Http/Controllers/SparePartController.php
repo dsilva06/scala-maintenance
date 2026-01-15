@@ -2,111 +2,63 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Actions\SpareParts\CreateSparePart;
+use App\Actions\SpareParts\DeleteSparePart;
+use App\Actions\SpareParts\UpdateSparePart;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
+use App\Http\Resources\SparePartResource;
 use App\Models\SparePart;
+use App\Queries\SpareParts\SparePartIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 use App\Http\Requests\SparePartStoreRequest;
 use App\Http\Requests\SparePartUpdateRequest;
 
 class SparePartController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
-    public function index(Request $request)
+    public function index(Request $request, SparePartIndexQuery $sparePartIndexQuery)
     {
-        $query = SparePart::query()
-            ->where('user_id', $request->user()->id);
+        $parts = $sparePartIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        if ($category = $request->query('category')) {
-            $query->where('category', $category);
-        }
-
-        $this->applyQueryOptions($request, $query, [
-            'created_at', 'updated_at', 'name', 'sku', 'current_stock',
-        ], [
-            'name', 'sku', 'part_number', 'brand', 'category',
-        ]);
-
-        return JsonResource::collection($query->get());
+        return SparePartResource::collection($parts);
     }
 
-    public function store(SparePartStoreRequest $request)
+    public function store(SparePartStoreRequest $request, CreateSparePart $createSparePart)
     {
-        $user = $request->user();
+        $this->authorizeCompanyWrite($request);
+        $part = $createSparePart->handle($request->user(), $request->validated());
 
-        $validated = $request->validated();
-
-        $part = $user->spareParts()->create($this->normalize($validated));
-
-        return JsonResource::make($part)->response()->setStatusCode(201);
+        return SparePartResource::make($part)->response()->setStatusCode(201);
     }
 
     public function show(Request $request, SparePart $sparePart)
     {
-        $this->authorizeResource($request, $sparePart);
+        $this->authorizeCompanyRead($request, $sparePart);
 
-        return JsonResource::make($sparePart);
+        return SparePartResource::make($sparePart);
     }
 
-    public function update(SparePartUpdateRequest $request, SparePart $sparePart)
+    public function update(SparePartUpdateRequest $request, SparePart $sparePart, UpdateSparePart $updateSparePart)
     {
-        $this->authorizeResource($request, $sparePart);
+        $this->authorizeCompanyRead($request, $sparePart);
+        $this->authorizeCompanyWrite($request);
 
-        $validated = $request->validated();
+        $sparePart = $updateSparePart->handle($request->user(), $sparePart, $request->validated());
 
-        $sparePart->update($this->normalize($validated));
-
-        return JsonResource::make($sparePart);
+        return SparePartResource::make($sparePart);
     }
 
-    public function destroy(Request $request, SparePart $sparePart)
+    public function destroy(Request $request, SparePart $sparePart, DeleteSparePart $deleteSparePart)
     {
-        $this->authorizeResource($request, $sparePart);
+        $this->authorizeCompanyRead($request, $sparePart);
+        $this->authorizeCompanyWrite($request);
 
-        $sparePart->delete();
+        $deleteSparePart->handle($request->user(), $sparePart);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeResource(Request $request, SparePart $part): void
-    {
-        if ($part->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
-    }
-
-    protected function normalize(array $attributes): array
-    {
-        if (array_key_exists('sku', $attributes)) {
-            $attributes['sku'] = Str::upper(trim($attributes['sku']));
-        }
-
-        if (array_key_exists('part_number', $attributes)) {
-            $attributes['part_number'] = $attributes['part_number'] === null || $attributes['part_number'] === ''
-                ? null
-                : Str::upper(trim($attributes['part_number']));
-        }
-
-        foreach (['name', 'brand', 'category', 'supplier', 'storage_location', 'status'] as $key) {
-            if (array_key_exists($key, $attributes) && is_string($attributes[$key])) {
-                $value = trim($attributes[$key]);
-                $attributes[$key] = $value === '' ? null : $value;
-            }
-        }
-
-        if (array_key_exists('photo_url', $attributes) && is_string($attributes['photo_url'])) {
-            $attributes['photo_url'] = trim($attributes['photo_url']);
-        }
-
-        foreach (['unit_cost'] as $numeric) {
-            if (array_key_exists($numeric, $attributes) && $attributes[$numeric] === '') {
-                $attributes[$numeric] = null;
-            }
-        }
-
-        return $attributes;
     }
 }

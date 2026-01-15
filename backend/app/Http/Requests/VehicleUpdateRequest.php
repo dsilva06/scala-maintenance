@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class VehicleUpdateRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,16 +17,13 @@ class VehicleUpdateRequest extends FormRequest
     public function rules(): array
     {
         $vehicle = $this->route('vehicle');
-        $userId = $this->user()?->id;
 
         return [
             'plate' => [
                 'sometimes',
                 'string',
                 'max:50',
-                Rule::unique('vehicles', 'plate')
-                    ->where('user_id', $userId)
-                    ->ignore($vehicle?->id),
+                $this->uniqueForUserCompany('vehicles', 'plate', $vehicle?->id),
             ],
             'brand' => ['sometimes', 'string', 'max:100'],
             'model' => ['sometimes', 'string', 'max:100'],

@@ -12,6 +12,7 @@ class Vehicle extends Model
 
     protected $fillable = [
         'user_id',
+        'company_id',
         'plate',
         'brand',
         'model',
@@ -39,6 +40,11 @@ class Vehicle extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function maintenanceOrders()

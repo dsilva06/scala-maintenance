@@ -3,6 +3,11 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->group('api', [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\ObservabilityMiddleware::class,
         ]);
 
         $middleware->alias([
@@ -33,5 +39,51 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->renderable(function (Throwable $e, Request $request) {
+            if (!$request->is('api/*')) {
+                return null;
+            }
+
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'error' => [
+                        'message' => 'Validation failed.',
+                        'code' => 422,
+                        'details' => $e->errors(),
+                    ],
+                ], 422);
+            }
+
+            if ($e instanceof AuthenticationException) {
+                return response()->json([
+                    'error' => [
+                        'message' => 'Unauthenticated.',
+                        'code' => 401,
+                    ],
+                ], 401);
+            }
+
+            if ($e instanceof AuthorizationException) {
+                return response()->json([
+                    'error' => [
+                        'message' => 'Forbidden.',
+                        'code' => 403,
+                    ],
+                ], 403);
+            }
+
+            $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
+            $message = $e instanceof HttpExceptionInterface ? $e->getMessage() : 'Server error.';
+
+            if ($message === '') {
+                $message = $status === 404 ? 'Not found.' : 'Server error.';
+            }
+
+            return response()->json([
+                'error' => [
+                    'message' => $message,
+                    'code' => $status,
+                ],
+            ], $status);
+        });
     })->create();

@@ -12,6 +12,7 @@ class Trip extends Model
 
     protected $fillable = [
         'user_id',
+        'company_id',
         'vehicle_id',
         'driver_id',
         'driver_name',
@@ -45,8 +46,23 @@ class Trip extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    public function positions()
+    {
+        return $this->hasMany(GpsPosition::class);
+    }
+
+    public function latestPosition()
+    {
+        return $this->hasOne(GpsPosition::class)->latestOfMany('recorded_at');
     }
 }

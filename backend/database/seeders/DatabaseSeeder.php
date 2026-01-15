@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Company;
 use App\Models\User;
 use App\Models\Plan;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -17,9 +18,15 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        $company = Company::firstOrCreate(
+            ['slug' => 'alca-demo'],
+            ['name' => 'ALCA Demo', 'slug' => 'alca-demo']
+        );
+
         User::updateOrCreate(
             ['email' => 'test@alca.com'],
             [
+                'company_id' => $company->id,
                 'name' => 'ALCA Demo',
                 'role' => 'admin',
                 'password' => Hash::make('ALCA123'),

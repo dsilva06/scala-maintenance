@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class SupplierUpdateRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,16 +17,13 @@ class SupplierUpdateRequest extends FormRequest
     public function rules(): array
     {
         $supplier = $this->route('supplier');
-        $userId = $this->user()?->id;
 
         return [
             'name' => [
                 'sometimes',
                 'string',
                 'max:150',
-                Rule::unique('suppliers', 'name')
-                    ->where('user_id', $userId)
-                    ->ignore($supplier?->id),
+                $this->uniqueForUserCompany('suppliers', 'name', $supplier?->id),
             ],
             'contact_name' => ['sometimes', 'nullable', 'string', 'max:150'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],

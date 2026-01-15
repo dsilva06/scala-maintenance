@@ -13,6 +13,7 @@ use App\Models\Trip;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\Mcp\Contracts\ContextProviderInterface;
+use App\Support\CompanyScope;
 use Illuminate\Support\Str;
 
 class SystemSearchProvider implements ContextProviderInterface
@@ -91,7 +92,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchVehicles(User $user, array $terms): array
     {
-        $query = Vehicle::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(Vehicle::class, $user);
 
         $this->applySearch($query, $terms, ['plate', 'brand', 'model', 'vin', 'assigned_driver']);
 
@@ -100,7 +101,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchMaintenanceOrders(User $user, array $terms): array
     {
-        $query = MaintenanceOrder::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(MaintenanceOrder::class, $user);
 
         $this->applySearch($query, $terms, ['order_number', 'title', 'description', 'mechanic']);
 
@@ -109,7 +110,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchSpareParts(User $user, array $terms): array
     {
-        $query = SparePart::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(SparePart::class, $user);
 
         $this->applySearch($query, $terms, ['sku', 'part_number', 'name', 'brand', 'category']);
 
@@ -118,7 +119,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchPurchaseOrders(User $user, array $terms): array
     {
-        $query = PurchaseOrder::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(PurchaseOrder::class, $user);
 
         $this->applySearch($query, $terms, ['order_number', 'supplier', 'product_name', 'notes']);
 
@@ -127,7 +128,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchDocuments(User $user, array $terms): array
     {
-        $query = Document::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(Document::class, $user);
 
         $this->applySearch($query, $terms, ['document_type', 'document_number', 'issuing_entity', 'notes']);
 
@@ -136,7 +137,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchAlerts(User $user, array $terms): array
     {
-        $query = Alert::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(Alert::class, $user);
 
         $this->applySearch($query, $terms, ['title', 'description', 'type']);
 
@@ -145,7 +146,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchInspections(User $user, array $terms): array
     {
-        $query = Inspection::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(Inspection::class, $user);
 
         $this->applySearch($query, $terms, ['inspector', 'notes', 'overall_status']);
 
@@ -154,7 +155,7 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchTrips(User $user, array $terms): array
     {
-        $query = Trip::query()->where('user_id', $user->id);
+        $query = $this->baseQuery(Trip::class, $user);
 
         $this->applySearch($query, $terms, ['origin', 'destination', 'driver_name', 'cargo_description', 'status']);
 
@@ -163,7 +164,8 @@ class SystemSearchProvider implements ContextProviderInterface
 
     protected function searchMessages(User $user, array $terms): array
     {
-        $query = AiMessage::query()->where('user_id', $user->id);
+        $query = CompanyScope::apply(AiMessage::query(), $user)
+            ->where('user_id', $user->id);
 
         $this->applySearch($query, $terms, ['content']);
 
@@ -198,5 +200,10 @@ class SystemSearchProvider implements ContextProviderInterface
         }
 
         return substr($value, 0, $limit) . '...';
+    }
+
+    protected function baseQuery(string $modelClass, User $user)
+    {
+        return CompanyScope::apply($modelClass::query(), $user);
     }
 }

@@ -6,12 +6,18 @@ use App\Models\PurchaseOrder;
 use App\Models\SparePart;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Services\Mcp\Contracts\ToolInterface;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CreatePurchaseOrderTool implements ToolInterface
 {
+    public function __construct(private AuditLogger $auditLogger)
+    {
+    }
+
     public function getName(): string
     {
         return 'create_purchase_order';
@@ -45,18 +51,24 @@ class CreatePurchaseOrderTool implements ToolInterface
 
     public function validateArguments(array $arguments, User $user): array
     {
+        if (!$user->canManageCompany()) {
+            throw ValidationException::withMessages([
+                'role' => ['No tienes permisos para crear ordenes de compra.'],
+            ]);
+        }
+
         $validator = Validator::make($arguments, [
             'order_number' => [
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('purchase_orders', 'order_number')->where('user_id', $user->id),
+                Rule::unique('purchase_orders', 'order_number')->where('company_id', $user->company_id),
             ],
             'supplier' => ['required_without:supplier_id', 'string', 'max:150'],
             'supplier_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('suppliers', 'id')->where('user_id', $user->id),
+                Rule::exists('suppliers', 'id')->where('company_id', $user->company_id),
             ],
             'product_name' => ['nullable', 'string', 'max:150'],
             'status' => ['nullable', 'string', 'max:50'],
@@ -67,7 +79,7 @@ class CreatePurchaseOrderTool implements ToolInterface
             'spare_part_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('spare_parts', 'id')->where('user_id', $user->id),
+                Rule::exists('spare_parts', 'id')->where('company_id', $user->company_id),
             ],
             'notes' => ['nullable', 'string'],
         ]);
@@ -84,7 +96,7 @@ class CreatePurchaseOrderTool implements ToolInterface
 
         if (!empty($validated['supplier_id']) && empty($validated['supplier'])) {
             $supplierName = Supplier::where('id', $validated['supplier_id'])
-                ->where('user_id', $user->id)
+                ->where('company_id', $user->company_id)
                 ->value('name');
 
             if ($supplierName) {
@@ -99,8 +111,19 @@ class CreatePurchaseOrderTool implements ToolInterface
     {
         $validated = $this->validateArguments($arguments, $user);
 
-        $order = $user->purchaseOrders()->create($validated);
+        $payload = $validated;
+        $payload['company_id'] = $user->company_id;
+        $order = $user->purchaseOrders()->create($payload);
         $this->applyInventoryReceipt($order);
+
+        $this->auditLogger->record(
+            $user,
+            'purchase_order.created',
+            $order,
+            [],
+            $this->auditLogger->snapshot($order),
+            ['source' => 'mcp']
+        );
 
         return [
             'id' => $order->id,
@@ -131,7 +154,7 @@ class CreatePurchaseOrderTool implements ToolInterface
 
         $part = SparePart::query()
             ->where('id', $order->spare_part_id)
-            ->where('user_id', $order->user_id)
+            ->where('company_id', $order->company_id)
             ->first();
 
         if (! $part) {

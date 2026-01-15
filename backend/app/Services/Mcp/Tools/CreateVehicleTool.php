@@ -4,12 +4,18 @@ namespace App\Services\Mcp\Tools;
 
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use App\Services\Mcp\Contracts\ToolInterface;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CreateVehicleTool implements ToolInterface
 {
+    public function __construct(private AuditLogger $auditLogger)
+    {
+    }
+
     public function getName(): string
     {
         return 'create_vehicle';
@@ -45,12 +51,18 @@ class CreateVehicleTool implements ToolInterface
 
     public function validateArguments(array $arguments, User $user): array
     {
+        if (!$user->canManageCompany()) {
+            throw ValidationException::withMessages([
+                'role' => ['No tienes permisos para crear vehiculos.'],
+            ]);
+        }
+
         $validator = Validator::make($arguments, [
             'plate' => [
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('vehicles', 'plate')->where('user_id', $user->id),
+                Rule::unique('vehicles', 'plate')->where('company_id', $user->company_id),
             ],
             'brand' => ['required', 'string', 'max:120'],
             'model' => ['required', 'string', 'max:120'],
@@ -86,7 +98,19 @@ class CreateVehicleTool implements ToolInterface
     {
         $validated = $this->validateArguments($arguments, $user);
 
-        $vehicle = $user->vehicles()->create($validated);
+        $payload = $validated;
+        $payload['company_id'] = $user->company_id;
+
+        $vehicle = $user->vehicles()->create($payload);
+
+        $this->auditLogger->record(
+            $user,
+            'vehicle.created',
+            $vehicle,
+            [],
+            $this->auditLogger->snapshot($vehicle),
+            ['source' => 'mcp']
+        );
 
         return [
             'id' => $vehicle->id,

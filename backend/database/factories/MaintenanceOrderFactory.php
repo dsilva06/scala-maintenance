@@ -22,6 +22,7 @@ class MaintenanceOrderFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'company_id' => fn (array $attributes) => User::find($attributes['user_id'])?->company_id,
             'vehicle_id' => null,
             'order_number' => Str::upper('MNT-' . $this->faker->bothify('####')),
             'type' => $this->faker->randomElement(['preventivo', 'correctivo']),

@@ -5,6 +5,7 @@ namespace App\Services\Mcp\Tools;
 use App\Models\MaintenanceOrder;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use App\Services\Mcp\Contracts\ToolInterface;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -12,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class CreateMaintenanceOrderTool implements ToolInterface
 {
+    public function __construct(private AuditLogger $auditLogger)
+    {
+    }
+
     public function getName(): string
     {
         return 'create_maintenance_order';
@@ -50,14 +55,24 @@ class CreateMaintenanceOrderTool implements ToolInterface
 
     public function validateArguments(array $arguments, User $user): array
     {
+        if (!$user->canManageCompany()) {
+            throw ValidationException::withMessages([
+                'role' => ['No tienes permisos para crear ordenes.'],
+            ]);
+        }
+
         $validator = Validator::make($arguments, [
-            'vehicle_id' => ['nullable', 'integer', 'exists:vehicles,id'],
+            'vehicle_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('vehicles', 'id')->where('company_id', $user->company_id),
+            ],
             'vehicle_plate' => ['nullable', 'string', 'max:50'],
             'order_number' => [
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('maintenance_orders', 'order_number')->where('user_id', $user->id),
+                Rule::unique('maintenance_orders', 'order_number')->where('company_id', $user->company_id),
             ],
             'type' => ['nullable', 'string', 'max:50'],
             'status' => ['nullable', 'string', 'max:50'],
@@ -86,9 +101,9 @@ class CreateMaintenanceOrderTool implements ToolInterface
         $validated = $validator->validate();
 
         if (!empty($validated['vehicle_id'])) {
-            $this->ensureVehicleOwnership($validated['vehicle_id'], $user->id);
+            $this->ensureVehicleOwnership($validated['vehicle_id'], $user->company_id);
         } elseif (!empty($validated['vehicle_plate'])) {
-            $vehicleId = $this->resolveVehicleByPlate($validated['vehicle_plate'], $user->id);
+            $vehicleId = $this->resolveVehicleByPlate($validated['vehicle_plate'], $user->company_id);
             $validated['vehicle_id'] = $vehicleId;
             unset($validated['vehicle_plate']);
         }
@@ -108,12 +123,23 @@ class CreateMaintenanceOrderTool implements ToolInterface
     {
         $validated = $this->validateArguments($arguments, $user);
 
-        $order = $user->maintenanceOrders()->create($validated);
+        $payload = $validated;
+        $payload['company_id'] = $user->company_id;
+        $order = $user->maintenanceOrders()->create($payload);
 
         if ($order->vehicle_id) {
-            $this->refreshVehicleStatus($order->vehicle_id, $user->id);
+            $this->refreshVehicleStatus($order->vehicle_id, $user->company_id);
             $this->syncVehicleMileageFromOrder($order);
         }
+
+        $this->auditLogger->record(
+            $user,
+            'maintenance_order.created',
+            $order,
+            [],
+            $this->auditLogger->snapshot($order),
+            ['source' => 'mcp']
+        );
 
         return [
             'id' => $order->id,
@@ -125,10 +151,10 @@ class CreateMaintenanceOrderTool implements ToolInterface
         ];
     }
 
-    protected function ensureVehicleOwnership(int $vehicleId, int $userId): void
+    protected function ensureVehicleOwnership(int $vehicleId, int $companyId): void
     {
         $ownsVehicle = Vehicle::whereKey($vehicleId)
-            ->where('user_id', $userId)
+            ->where('company_id', $companyId)
             ->exists();
 
         if (!$ownsVehicle) {
@@ -138,10 +164,10 @@ class CreateMaintenanceOrderTool implements ToolInterface
         }
     }
 
-    protected function resolveVehicleByPlate(string $plate, int $userId): int
+    protected function resolveVehicleByPlate(string $plate, int $companyId): int
     {
         $vehicle = Vehicle::query()
-            ->where('user_id', $userId)
+            ->where('company_id', $companyId)
             ->whereRaw('lower(plate) = ?', [strtolower($plate)])
             ->first();
 
@@ -154,19 +180,19 @@ class CreateMaintenanceOrderTool implements ToolInterface
         return $vehicle->id;
     }
 
-    protected function refreshVehicleStatus(int $vehicleId, int $userId): void
+    protected function refreshVehicleStatus(int $vehicleId, int $companyId): void
     {
         $openStatuses = ['pendiente', 'en_progreso'];
 
         $hasOpenOrders = MaintenanceOrder::where('vehicle_id', $vehicleId)
-            ->where('user_id', $userId)
+            ->where('company_id', $companyId)
             ->whereIn('status', $openStatuses)
             ->exists();
 
         $newStatus = $hasOpenOrders ? 'mantenimiento' : 'activo';
 
         Vehicle::where('id', $vehicleId)
-            ->where('user_id', $userId)
+            ->where('company_id', $companyId)
             ->update(['status' => $newStatus]);
     }
 
@@ -181,7 +207,7 @@ class CreateMaintenanceOrderTool implements ToolInterface
         }
 
         $vehicle = Vehicle::where('id', $order->vehicle_id)
-            ->where('user_id', $order->user_id)
+            ->where('company_id', $order->company_id)
             ->first();
 
         if (! $vehicle) {

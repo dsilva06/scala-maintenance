@@ -5,6 +5,7 @@ namespace App\Services\Mcp\Context;
 use App\Models\AiMemory;
 use App\Models\User;
 use App\Services\Mcp\Contracts\ContextProviderInterface;
+use App\Support\CompanyScope;
 use Illuminate\Support\Str;
 
 class OperationalMemoryProvider implements ContextProviderInterface
@@ -28,7 +29,8 @@ class OperationalMemoryProvider implements ContextProviderInterface
             return [];
         }
 
-        $query = AiMemory::query()->where('user_id', $user->id);
+        $query = CompanyScope::apply(AiMemory::query(), $user)
+            ->where('user_id', $user->id);
         $this->applySearch($query, $terms);
 
         $memories = $query->orderByDesc('importance')

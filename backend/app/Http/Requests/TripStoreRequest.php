@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TripStoreRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -14,7 +17,10 @@ class TripStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'vehicle_id' => ['nullable', 'exists:vehicles,id'],
+            'vehicle_id' => [
+                'nullable',
+                $this->existsForUserCompany('vehicles', 'id'),
+            ],
             'driver_id' => ['nullable', 'string', 'max:120'],
             'driver_name' => ['nullable', 'string', 'max:150'],
             'origin' => ['nullable', 'string', 'max:150'],

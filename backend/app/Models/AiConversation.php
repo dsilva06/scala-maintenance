@@ -12,6 +12,7 @@ class AiConversation extends Model
 
     protected $fillable = [
         'user_id',
+        'company_id',
         'title',
         'metadata',
         'last_message_at',
@@ -25,6 +26,11 @@ class AiConversation extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function messages()

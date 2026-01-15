@@ -22,6 +22,7 @@ class VehicleFactory extends Factory
 
         return [
             'user_id' => User::factory(),
+            'company_id' => fn (array $attributes) => User::find($attributes['user_id'])?->company_id,
             'plate' => $plate,
             'brand' => $this->faker->randomElement(['Volvo', 'Scania', 'Mercedes-Benz', 'Ford', 'Iveco']),
             'model' => $this->faker->randomElement(['FH', 'G-Series', 'Actros', 'Cargo', 'Eurocargo']),

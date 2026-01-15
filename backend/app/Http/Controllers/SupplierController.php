@@ -2,75 +2,63 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
 use App\Http\Requests\SupplierStoreRequest;
 use App\Http\Requests\SupplierUpdateRequest;
+use App\Http\Resources\SupplierResource;
 use App\Models\Supplier;
+use App\Queries\Suppliers\SupplierIndexQuery;
+use App\Actions\Suppliers\CreateSupplier;
+use App\Actions\Suppliers\DeleteSupplier;
+use App\Actions\Suppliers\UpdateSupplier;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 
 class SupplierController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
-    public function index(Request $request)
+    public function index(Request $request, SupplierIndexQuery $supplierIndexQuery)
     {
-        $query = Supplier::query()->where('user_id', $request->user()->id);
+        $suppliers = $supplierIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        $this->applyQueryOptions($request, $query, ['created_at', 'updated_at', 'name'], ['name', 'contact_name', 'email', 'phone']);
-
-        return JsonResource::collection($query->get());
+        return SupplierResource::collection($suppliers);
     }
 
-    public function store(SupplierStoreRequest $request)
+    public function store(SupplierStoreRequest $request, CreateSupplier $createSupplier)
     {
-        $supplier = $request->user()->suppliers()->create($this->normalize($request->validated()));
+        $this->authorizeCompanyWrite($request);
+        $supplier = $createSupplier->handle($request->user(), $request->validated());
 
-        return JsonResource::make($supplier)->response()->setStatusCode(201);
+        return SupplierResource::make($supplier)->response()->setStatusCode(201);
     }
 
     public function show(Request $request, Supplier $supplier)
     {
-        $this->authorizeResource($request, $supplier);
+        $this->authorizeCompanyRead($request, $supplier);
 
-        return JsonResource::make($supplier);
+        return SupplierResource::make($supplier);
     }
 
-    public function update(SupplierUpdateRequest $request, Supplier $supplier)
+    public function update(SupplierUpdateRequest $request, Supplier $supplier, UpdateSupplier $updateSupplier)
     {
-        $this->authorizeResource($request, $supplier);
+        $this->authorizeCompanyRead($request, $supplier);
+        $this->authorizeCompanyWrite($request);
 
-        $supplier->update($this->normalize($request->validated()));
+        $supplier = $updateSupplier->handle($request->user(), $supplier, $request->validated());
 
-        return JsonResource::make($supplier);
+        return SupplierResource::make($supplier);
     }
 
-    public function destroy(Request $request, Supplier $supplier)
+    public function destroy(Request $request, Supplier $supplier, DeleteSupplier $deleteSupplier)
     {
-        $this->authorizeResource($request, $supplier);
+        $this->authorizeCompanyRead($request, $supplier);
+        $this->authorizeCompanyWrite($request);
 
-        $supplier->delete();
+        $deleteSupplier->handle($request->user(), $supplier);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeResource(Request $request, Supplier $supplier): void
-    {
-        if ($supplier->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
-    }
-
-    protected function normalize(array $attributes): array
-    {
-        foreach (['name', 'contact_name', 'phone', 'email', 'notes'] as $key) {
-            if (array_key_exists($key, $attributes) && is_string($attributes[$key])) {
-                $value = trim($attributes[$key]);
-                $attributes[$key] = $value === '' ? null : $value;
-            }
-        }
-
-        return $attributes;
     }
 }

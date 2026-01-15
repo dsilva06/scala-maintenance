@@ -13,6 +13,7 @@ class AiAction extends Model
     protected $fillable = [
         'conversation_id',
         'user_id',
+        'company_id',
         'tool',
         'arguments',
         'status',
@@ -41,5 +42,10 @@ class AiAction extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 }

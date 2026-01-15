@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class SparePartStoreRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -14,20 +16,18 @@ class SparePartStoreRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->user()?->id;
-
         return [
             'sku' => [
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('spare_parts', 'sku')->where('user_id', $userId),
+                $this->uniqueForUserCompany('spare_parts', 'sku'),
             ],
             'part_number' => [
                 'nullable',
                 'string',
                 'max:120',
-                Rule::unique('spare_parts', 'part_number')->where('user_id', $userId),
+                $this->uniqueForUserCompany('spare_parts', 'part_number'),
             ],
             'name' => ['required', 'string', 'max:150'],
             'photo_url' => ['nullable', 'string'],

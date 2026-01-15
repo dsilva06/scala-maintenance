@@ -2,79 +2,77 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Actions\Trips\CreateTrip;
+use App\Actions\Trips\DeleteTrip;
+use App\Actions\Trips\UpdateTrip;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
+use App\Http\Resources\TripResource;
 use App\Models\Trip;
+use App\Queries\Trips\TripIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Requests\TripStoreRequest;
 use App\Http\Requests\TripUpdateRequest;
 
 class TripController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
-    public function index(Request $request)
+    public function index(Request $request, TripIndexQuery $tripIndexQuery)
     {
-        $query = Trip::query()
-            ->with('vehicle')
-            ->where('user_id', $request->user()->id);
+        $trips = $tripIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        if ($status = $request->query('status')) {
-            $query->where('status', $status);
-        }
-
-        $this->applyQueryOptions($request, $query, [
-            'start_date', 'created_at', 'status',
-        ], [
-            'origin', 'destination', 'driver_name',
-        ]);
-
-        return JsonResource::collection($query->get());
+        return TripResource::collection($trips);
     }
 
-    public function store(TripStoreRequest $request)
+    public function store(TripStoreRequest $request, CreateTrip $createTrip)
     {
+        $this->authorizeCompanyWrite($request);
         $user = $request->user();
 
         $validated = $request->validated();
 
-        $trip = $user->trips()->create($validated);
+        $trip = $createTrip->handle($user, $validated);
 
-        return JsonResource::make($trip->load('vehicle'))->response()->setStatusCode(201);
+        return TripResource::make($trip->load('vehicle'))->response()->setStatusCode(201);
     }
 
     public function show(Request $request, Trip $trip)
     {
-        $this->authorizeResource($request, $trip);
+        $this->authorizeCompanyRead($request, $trip);
 
-        return JsonResource::make($trip->load('vehicle'));
+        $historyLimit = (int) config('fleet.telemetry.position_history_limit', 50);
+
+        return TripResource::make($trip->load([
+            'vehicle',
+            'latestPosition',
+            'positions' => fn ($query) => $query
+                ->orderByDesc('recorded_at')
+                ->limit($historyLimit),
+        ]));
     }
 
-    public function update(TripUpdateRequest $request, Trip $trip)
+    public function update(TripUpdateRequest $request, Trip $trip, UpdateTrip $updateTrip)
     {
-        $this->authorizeResource($request, $trip);
+        $this->authorizeCompanyRead($request, $trip);
+        $this->authorizeCompanyWrite($request);
 
         $validated = $request->validated();
 
-        $trip->update($validated);
+        $trip = $updateTrip->handle($request->user(), $trip, $validated);
 
-        return JsonResource::make($trip->load('vehicle'));
+        return TripResource::make($trip->load('vehicle'));
     }
 
-    public function destroy(Request $request, Trip $trip)
+    public function destroy(Request $request, Trip $trip, DeleteTrip $deleteTrip)
     {
-        $this->authorizeResource($request, $trip);
+        $this->authorizeCompanyRead($request, $trip);
+        $this->authorizeCompanyWrite($request);
 
-        $trip->delete();
+        $deleteTrip->handle($request->user(), $trip);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeResource(Request $request, Trip $trip): void
-    {
-        if ($trip->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
     }
 }

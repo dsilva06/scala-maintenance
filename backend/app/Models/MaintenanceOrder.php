@@ -12,6 +12,7 @@ class MaintenanceOrder extends Model
 
     protected $fillable = [
         'user_id',
+        'company_id',
         'vehicle_id',
         'order_number',
         'type',
@@ -45,6 +46,11 @@ class MaintenanceOrder extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function vehicle()

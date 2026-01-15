@@ -159,6 +159,7 @@ class AiActionService
         $action = AiAction::create([
             'conversation_id' => $conversation->id,
             'user_id' => $user->id,
+            'company_id' => $user->company_id,
             'tool' => $tool,
             'arguments' => $arguments,
             'status' => $status,

@@ -30,6 +30,7 @@ class SparePartFactory extends Factory
 
         return [
             'user_id' => User::factory(),
+            'company_id' => fn (array $attributes) => User::find($attributes['user_id'])?->company_id,
             'sku' => Str::upper($this->faker->bothify('SP-#####')),
             'part_number' => $this->faker->optional()->bothify('PN-####'),
             'name' => $name,

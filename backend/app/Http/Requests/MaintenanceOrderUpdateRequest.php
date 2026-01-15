@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class MaintenanceOrderUpdateRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,17 +17,18 @@ class MaintenanceOrderUpdateRequest extends FormRequest
     public function rules(): array
     {
         $maintenanceOrder = $this->route('maintenanceOrder');
-        $userId = $this->user()?->id;
 
         return [
-            'vehicle_id' => ['sometimes', 'nullable', 'exists:vehicles,id'],
+            'vehicle_id' => [
+                'sometimes',
+                'nullable',
+                $this->existsForUserCompany('vehicles', 'id'),
+            ],
             'order_number' => [
                 'sometimes',
                 'string',
                 'max:120',
-                Rule::unique('maintenance_orders', 'order_number')
-                    ->where('user_id', $userId)
-                    ->ignore($maintenanceOrder?->id),
+                $this->uniqueForUserCompany('maintenance_orders', 'order_number', $maintenanceOrder?->id),
             ],
             'type' => ['sometimes', 'string', 'max:50'],
             'status' => ['sometimes', 'string', 'max:50'],

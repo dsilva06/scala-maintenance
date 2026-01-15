@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class DocumentStoreRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -14,17 +16,17 @@ class DocumentStoreRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->user()?->id;
-
         return [
-            'vehicle_id' => ['nullable', 'exists:vehicles,id'],
+            'vehicle_id' => [
+                'nullable',
+                $this->existsForUserCompany('vehicles', 'id'),
+            ],
             'document_type' => [
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('documents', 'document_type')
+                $this->uniqueForUserCompany('documents', 'document_type')
                     ->where(fn ($query) => $query
-                        ->where('user_id', $userId)
                         ->where('vehicle_id', $this->input('vehicle_id'))),
             ],
             'document_number' => ['nullable', 'string', 'max:150'],

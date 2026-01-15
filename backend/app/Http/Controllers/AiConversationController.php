@@ -7,6 +7,9 @@ use App\Models\AiAction;
 use App\Models\AiMessage;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
+use App\Http\Requests\AiConversationStoreRequest;
+use App\Http\Requests\AiMessageStoreRequest;
 use App\Services\AiAgent\AiActionService;
 use App\Services\AiAgent\AiAgentService;
 use App\Services\Mcp\McpContextBuilder;
@@ -18,6 +21,8 @@ use Illuminate\Support\Carbon;
 
 class AiConversationController extends Controller
 {
+    use AuthorizesCompanyResource;
+
     public function __construct(
         protected AiAgentService $service,
         protected McpContextBuilder $contextBuilder,
@@ -30,6 +35,7 @@ class AiConversationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $conversations = AiConversation::query()
+            ->where('company_id', $request->user()->company_id)
             ->where('user_id', $request->user()->id)
             ->orderByDesc('updated_at')
             ->withCount('messages')
@@ -39,15 +45,13 @@ class AiConversationController extends Controller
         return response()->json(['data' => $conversations]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(AiConversationStoreRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => ['nullable', 'string', 'max:255'],
-            'metadata' => ['nullable', 'array'],
-        ]);
+        $validated = $request->validated();
 
         $conversation = AiConversation::create([
             'user_id' => $request->user()->id,
+            'company_id' => $request->user()->company_id,
             'title' => $validated['title'] ?? null,
             'metadata' => $validated['metadata'] ?? null,
             'last_message_at' => now(),
@@ -58,7 +62,7 @@ class AiConversationController extends Controller
 
     public function show(Request $request, AiConversation $conversation): JsonResponse
     {
-        $this->authorizeConversation($request, $conversation);
+        $this->authorizeCompanyRead($request, $conversation);
 
         $messages = $conversation->messages()
             ->latest()
@@ -77,21 +81,17 @@ class AiConversationController extends Controller
 
     public function destroy(Request $request, AiConversation $conversation): JsonResponse
     {
-        $this->authorizeConversation($request, $conversation);
+        $this->authorizeCompanyRead($request, $conversation);
 
         $conversation->delete();
 
         return new JsonResponse(null, 204);
     }
 
-    public function storeMessage(Request $request, AiConversation $conversation): JsonResponse
+    public function storeMessage(AiMessageStoreRequest $request, AiConversation $conversation): JsonResponse
     {
-        $this->authorizeConversation($request, $conversation);
-
-        $validated = $request->validate([
-            'message' => ['required', 'string', 'max:4000'],
-            'context' => ['sometimes', 'array'],
-        ]);
+        $this->authorizeCompanyRead($request, $conversation);
+        $validated = $request->validated();
 
         $user = $request->user();
 
@@ -100,6 +100,7 @@ class AiConversationController extends Controller
 
         $userMessage = $conversation->messages()->create([
             'user_id' => $user->id,
+            'company_id' => $user->company_id,
             'role' => 'user',
             'content' => $validated['message'],
             'status' => 'submitted',
@@ -139,6 +140,7 @@ class AiConversationController extends Controller
 
         $assistantMessage = $conversation->messages()->create([
             'user_id' => $user->id,
+            'company_id' => $user->company_id,
             'role' => 'assistant',
             'content' => $content,
             'provider' => $draft['metadata']['provider'] ?? null,
@@ -163,13 +165,6 @@ class AiConversationController extends Controller
                 'actions' => $actions,
             ],
         ], 202);
-    }
-
-    protected function authorizeConversation(Request $request, AiConversation $conversation): void
-    {
-        if ($conversation->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
     }
 
     protected function serializeConversation(AiConversation $conversation): array
@@ -198,7 +193,13 @@ class AiConversationController extends Controller
 
     protected function resolvePlanAndSubscription($user): array
     {
-        $subscription = Subscription::with('plan')->where('user_id', $user->id)->first();
+        $subscription = Subscription::with('plan')
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($subscription && !$subscription->company_id && $user->company_id) {
+            $subscription->update(['company_id' => $user->company_id]);
+        }
 
         if ($subscription && $subscription->period_ends_at && Carbon::now()->greaterThan($subscription->period_ends_at)) {
             $subscription->update([
@@ -222,15 +223,21 @@ class AiConversationController extends Controller
                 ]
             );
 
-            $subscription = Subscription::create([
-                'user_id' => $user->id,
-                'plan_id' => $plan?->id,
-                'messages_used' => 0,
-                'period_started_at' => Carbon::now(),
-                'period_ends_at' => Carbon::now()->addMonth(),
-            ]);
+            $subscription = Subscription::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'company_id' => $user->company_id,
+                    'plan_id' => $plan?->id,
+                    'messages_used' => 0,
+                    'period_started_at' => Carbon::now(),
+                    'period_ends_at' => Carbon::now()->addMonth(),
+                ]
+            );
 
-            $subscription->setRelation('plan', $plan);
+            $subscription->load('plan');
+            if (!$subscription->plan && $plan) {
+                $subscription->setRelation('plan', $plan);
+            }
         }
 
         $plan = $subscription->plan ?? Plan::where('slug', 'free')->first();
@@ -284,6 +291,7 @@ class AiConversationController extends Controller
         if ($pending->isEmpty()) {
             $assistantMessage = $conversation->messages()->create([
                 'user_id' => $user->id,
+                'company_id' => $user->company_id,
                 'role' => 'assistant',
                 'content' => 'No hay acciones pendientes para confirmar o cancelar.',
                 'status' => 'completed',
@@ -311,6 +319,7 @@ class AiConversationController extends Controller
         if (!$action) {
             $assistantMessage = $conversation->messages()->create([
                 'user_id' => $user->id,
+                'company_id' => $user->company_id,
                 'role' => 'assistant',
                 'content' => 'Hay varias acciones pendientes. Indica el ID o confirma desde el panel de acciones.',
                 'status' => 'completed',
@@ -339,6 +348,7 @@ class AiConversationController extends Controller
 
         $assistantMessage = $conversation->messages()->create([
             'user_id' => $user->id,
+            'company_id' => $user->company_id,
             'role' => 'assistant',
             'content' => $this->formatActionSummary($action),
             'status' => 'completed',

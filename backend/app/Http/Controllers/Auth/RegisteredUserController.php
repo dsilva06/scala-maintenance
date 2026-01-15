@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use Illuminate\Support\Str;
 
 class RegisteredUserController extends Controller
 {
@@ -18,17 +19,28 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): Response
+    public function store(RegisterRequest $request): Response
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        $validated = $request->validated();
+
+        $companyName = $validated['company_name'] ?? ($validated['name'] . ' Company');
+        $slug = Str::slug($companyName);
+        $suffix = 1;
+
+        while (Company::where('slug', $slug)->exists()) {
+            $suffix++;
+            $slug = Str::slug($companyName) . '-' . $suffix;
+        }
+
+        $company = Company::create([
+            'name' => $companyName,
+            'slug' => $slug,
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'company_id' => $company->id,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'role' => 'employee',
             'password' => Hash::make($request->string('password')),
         ]);

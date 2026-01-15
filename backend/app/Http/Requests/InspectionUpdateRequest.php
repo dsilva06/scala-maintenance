@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class InspectionUpdateRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -14,7 +17,11 @@ class InspectionUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'vehicle_id' => ['sometimes', 'nullable', 'exists:vehicles,id'],
+            'vehicle_id' => [
+                'sometimes',
+                'nullable',
+                $this->existsForUserCompany('vehicles', 'id'),
+            ],
             'inspection_date' => ['sometimes', 'date'],
             'inspector' => ['sometimes', 'string', 'max:120'],
             'mileage' => ['sometimes', 'integer', 'min:0'],

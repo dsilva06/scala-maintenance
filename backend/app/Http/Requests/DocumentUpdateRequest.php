@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class DocumentUpdateRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,19 +17,20 @@ class DocumentUpdateRequest extends FormRequest
     public function rules(): array
     {
         $document = $this->route('document');
-        $userId = $this->user()?->id;
         $vehicleId = $this->input('vehicle_id', $document?->vehicle_id);
 
         return [
-            'vehicle_id' => ['sometimes', 'nullable', 'exists:vehicles,id'],
+            'vehicle_id' => [
+                'sometimes',
+                'nullable',
+                $this->existsForUserCompany('vehicles', 'id'),
+            ],
             'document_type' => [
                 'sometimes',
                 'string',
                 'max:100',
-                Rule::unique('documents', 'document_type')
-                    ->ignore($document?->id)
+                $this->uniqueForUserCompany('documents', 'document_type', $document?->id)
                     ->where(fn ($query) => $query
-                        ->where('user_id', $userId)
                         ->where('vehicle_id', $vehicleId)),
             ],
             'document_number' => ['sometimes', 'nullable', 'string', 'max:150'],

@@ -12,6 +12,7 @@ class Document extends Model
 
     protected $fillable = [
         'user_id',
+        'company_id',
         'vehicle_id',
         'document_type',
         'document_number',
@@ -34,6 +35,11 @@ class Document extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function vehicle()

@@ -24,12 +24,14 @@ class AiMemoryService
         }
 
         $payload['user_id'] = $user->id;
+        $payload['company_id'] = $user->company_id;
         $payload['action'] = $action->tool;
 
         if (!empty($payload['entity_id'])) {
             return AiMemory::updateOrCreate(
                 [
                     'user_id' => $user->id,
+                    'company_id' => $user->company_id,
                     'entity_type' => $payload['entity_type'],
                     'entity_id' => $payload['entity_id'],
                 ],

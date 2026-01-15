@@ -4,12 +4,17 @@ namespace App\Services\Mcp\Tools;
 
 use App\Models\SparePart;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Services\Mcp\Contracts\ToolInterface;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class UpdateSparePartStockTool implements ToolInterface
 {
+    public function __construct(private AuditLogger $auditLogger)
+    {
+    }
+
     public function getName(): string
     {
         return 'update_spare_part_stock';
@@ -39,6 +44,12 @@ class UpdateSparePartStockTool implements ToolInterface
 
     public function validateArguments(array $arguments, User $user): array
     {
+        if (!$user->canManageCompany()) {
+            throw ValidationException::withMessages([
+                'role' => ['No tienes permisos para actualizar repuestos.'],
+            ]);
+        }
+
         $validator = Validator::make($arguments, [
             'part_id' => ['nullable', 'integer'],
             'sku' => ['nullable', 'string', 'max:120'],
@@ -74,7 +85,7 @@ class UpdateSparePartStockTool implements ToolInterface
     {
         $validated = $this->validateArguments($arguments, $user);
 
-        $part = $this->resolvePart($validated, $user->id);
+        $part = $this->resolvePart($validated, $user->company_id);
 
         $updates = $validated;
         unset($updates['part_id'], $updates['sku']);
@@ -84,7 +95,17 @@ class UpdateSparePartStockTool implements ToolInterface
             unset($updates['delta']);
         }
 
+        $before = $this->auditLogger->snapshot($part);
         $part->update($updates);
+
+        $this->auditLogger->record(
+            $user,
+            'spare_part.updated',
+            $part,
+            $before,
+            $this->auditLogger->snapshot($part->refresh()),
+            ['source' => 'mcp']
+        );
 
         return [
             'id' => $part->id,
@@ -96,9 +117,9 @@ class UpdateSparePartStockTool implements ToolInterface
         ];
     }
 
-    protected function resolvePart(array $validated, int $userId): SparePart
+    protected function resolvePart(array $validated, int $companyId): SparePart
     {
-        $query = SparePart::query()->where('user_id', $userId);
+        $query = SparePart::query()->where('company_id', $companyId);
 
         if (!empty($validated['part_id'])) {
             $query->where('id', $validated['part_id']);

@@ -11,6 +11,7 @@ use App\Models\SparePart;
 use App\Models\Trip;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\CompanyScope;
 use App\Services\Mcp\Contracts\ContextProviderInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -25,83 +26,74 @@ class BusinessContextProvider implements ContextProviderInterface
         $nextServiceWindow = $now->copy()->addDays($serviceWindowDays);
         $nextDocumentWindow = $now->copy()->addDays($documentWindowDays);
 
-        $vehicleCount = Vehicle::query()->where('user_id', $user->id)->count();
+        $vehicleCount = $this->scopeCompany(Vehicle::query(), $user)->count();
         $vehicleStatusCounts = $this->groupCounts(
-            Vehicle::query()->where('user_id', $user->id),
+            $this->scopeCompany(Vehicle::query(), $user),
             'status'
         );
-        $serviceDueCount = Vehicle::query()
-            ->where('user_id', $user->id)
+        $serviceDueCount = $this->scopeCompany(Vehicle::query(), $user)
             ->whereNotNull('next_service_date')
             ->whereDate('next_service_date', '<=', $nextServiceWindow)
             ->count();
 
         $maintenanceStatusCounts = $this->groupCounts(
-            MaintenanceOrder::query()->where('user_id', $user->id),
+            $this->scopeCompany(MaintenanceOrder::query(), $user),
             'status'
         );
-        $openMaintenance = MaintenanceOrder::query()
-            ->where('user_id', $user->id)
+        $openMaintenance = $this->scopeCompany(MaintenanceOrder::query(), $user)
             ->whereNotIn('status', ['completado', 'cerrado', 'cancelado'])
             ->count();
-        $overdueMaintenance = MaintenanceOrder::query()
-            ->where('user_id', $user->id)
+        $overdueMaintenance = $this->scopeCompany(MaintenanceOrder::query(), $user)
             ->whereNotNull('scheduled_date')
             ->where('scheduled_date', '<', $now)
             ->whereNotIn('status', ['completado', 'cerrado', 'cancelado'])
             ->count();
-        $avgActualCost = MaintenanceOrder::query()
-            ->where('user_id', $user->id)
+        $avgActualCost = $this->scopeCompany(MaintenanceOrder::query(), $user)
             ->whereNotNull('actual_cost')
             ->avg('actual_cost');
 
-        $sparePartsTotal = SparePart::query()->where('user_id', $user->id)->count();
-        $criticalParts = SparePart::query()
-            ->where('user_id', $user->id)
+        $sparePartsTotal = $this->scopeCompany(SparePart::query(), $user)->count();
+        $criticalParts = $this->scopeCompany(SparePart::query(), $user)
             ->whereColumn('current_stock', '<=', 'minimum_stock')
             ->orderBy('current_stock')
             ->limit(5)
             ->get(['sku', 'name', 'current_stock', 'minimum_stock']);
-        $criticalPartsCount = SparePart::query()
-            ->where('user_id', $user->id)
+        $criticalPartsCount = $this->scopeCompany(SparePart::query(), $user)
             ->whereColumn('current_stock', '<=', 'minimum_stock')
             ->count();
 
         $purchaseOrderStatusCounts = $this->groupCounts(
-            PurchaseOrder::query()->where('user_id', $user->id),
+            $this->scopeCompany(PurchaseOrder::query(), $user),
             'status'
         );
 
         $alertStatusCounts = $this->groupCounts(
-            Alert::query()->where('user_id', $user->id),
+            $this->scopeCompany(Alert::query(), $user),
             'status'
         );
         $alertSeverityCounts = $this->groupCounts(
-            Alert::query()->where('user_id', $user->id),
+            $this->scopeCompany(Alert::query(), $user),
             'severity'
         );
-        $alertsOpen = Alert::query()
-            ->where('user_id', $user->id)
+        $alertsOpen = $this->scopeCompany(Alert::query(), $user)
             ->whereNotIn('status', ['resolved', 'cerrado'])
             ->count();
 
-        $documentsExpiring = Document::query()
-            ->where('user_id', $user->id)
+        $documentsExpiring = $this->scopeCompany(Document::query(), $user)
             ->whereNotNull('expiration_date')
             ->whereDate('expiration_date', '<=', $nextDocumentWindow)
             ->count();
 
         $inspectionStatusCounts = $this->groupCounts(
-            Inspection::query()->where('user_id', $user->id),
+            $this->scopeCompany(Inspection::query(), $user),
             'overall_status'
         );
-        $inspectionsLast30 = Inspection::query()
-            ->where('user_id', $user->id)
+        $inspectionsLast30 = $this->scopeCompany(Inspection::query(), $user)
             ->whereDate('inspection_date', '>=', $now->copy()->subDays(30))
             ->count();
 
         $tripStatusCounts = $this->groupCounts(
-            Trip::query()->where('user_id', $user->id),
+            $this->scopeCompany(Trip::query(), $user),
             'status'
         );
 
@@ -198,5 +190,10 @@ class BusinessContextProvider implements ContextProviderInterface
         }
 
         return implode(', ', $parts);
+    }
+
+    protected function scopeCompany($query, User $user)
+    {
+        return CompanyScope::apply($query, $user);
     }
 }

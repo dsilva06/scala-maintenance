@@ -11,12 +11,17 @@ use App\Models\SparePart;
 use App\Models\Trip;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\AuditLogger;
 use App\Services\Mcp\Contracts\ToolInterface;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class CreateAlertTool implements ToolInterface
 {
+    public function __construct(private AuditLogger $auditLogger)
+    {
+    }
+
     public function getName(): string
     {
         return 'create_alert';
@@ -46,6 +51,12 @@ class CreateAlertTool implements ToolInterface
 
     public function validateArguments(array $arguments, User $user): array
     {
+        if (!$user->canManageCompany()) {
+            throw ValidationException::withMessages([
+                'role' => ['No tienes permisos para crear alertas.'],
+            ]);
+        }
+
         $validator = Validator::make($arguments, [
             'type' => ['required', 'string', 'max:80'],
             'severity' => ['nullable', 'string', 'max:50'],
@@ -72,7 +83,7 @@ class CreateAlertTool implements ToolInterface
 
         if (!empty($validated['related_type'])) {
             $validated['related_type'] = $this->resolveRelatedType($validated['related_type']);
-            $this->ensureRelatedOwnership($validated['related_type'], $validated['related_id'], $user->id);
+            $this->ensureRelatedOwnership($validated['related_type'], $validated['related_id'], $user->company_id);
         }
 
         return $validated;
@@ -82,7 +93,19 @@ class CreateAlertTool implements ToolInterface
     {
         $validated = $this->validateArguments($arguments, $user);
 
-        $alert = $user->alerts()->create($validated);
+        $payload = $validated;
+        $payload['company_id'] = $user->company_id;
+
+        $alert = $user->alerts()->create($payload);
+
+        $this->auditLogger->record(
+            $user,
+            'alert.created',
+            $alert,
+            [],
+            $this->auditLogger->snapshot($alert),
+            ['source' => 'mcp']
+        );
 
         return [
             'id' => $alert->id,
@@ -116,11 +139,11 @@ class CreateAlertTool implements ToolInterface
         return $map[$normalized];
     }
 
-    protected function ensureRelatedOwnership(string $modelClass, int $id, int $userId): void
+    protected function ensureRelatedOwnership(string $modelClass, int $id, int $companyId): void
     {
         $exists = $modelClass::query()
             ->where('id', $id)
-            ->where('user_id', $userId)
+            ->where('company_id', $companyId)
             ->exists();
 
         if (!$exists) {

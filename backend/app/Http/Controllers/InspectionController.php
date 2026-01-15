@@ -2,142 +2,63 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Actions\Inspections\CreateInspection;
+use App\Actions\Inspections\DeleteInspection;
+use App\Actions\Inspections\UpdateInspection;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
+use App\Http\Resources\InspectionResource;
 use App\Models\Inspection;
-use App\Models\MaintenanceOrder;
-use App\Models\Vehicle;
+use App\Queries\Inspections\InspectionIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Carbon;
 use App\Http\Requests\InspectionStoreRequest;
 use App\Http\Requests\InspectionUpdateRequest;
 
 class InspectionController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
-    public function index(Request $request)
+    public function index(Request $request, InspectionIndexQuery $inspectionIndexQuery)
     {
-        $query = Inspection::query()
-            ->with('vehicle')
-            ->where('user_id', $request->user()->id);
+        $inspections = $inspectionIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        if ($vehicleId = $request->query('vehicle_id')) {
-            $query->where('vehicle_id', $vehicleId);
-        }
-
-        if ($month = $request->query('month')) {
-            try {
-                $start = Carbon::parse($month . '-01')->startOfMonth();
-                $end = (clone $start)->endOfMonth();
-                $query->whereBetween('inspection_date', [$start, $end]);
-            } catch (\Exception $e) {
-                // ignore invalid month format
-            }
-        }
-
-        $this->applyQueryOptions($request, $query, [
-            'inspection_date', 'created_at', 'overall_status',
-        ], [
-            'inspector', 'overall_status',
-        ]);
-
-        return JsonResource::collection($query->get());
+        return InspectionResource::collection($inspections);
     }
 
-    public function store(InspectionStoreRequest $request)
+    public function store(InspectionStoreRequest $request, CreateInspection $createInspection)
     {
-        $user = $request->user();
+        $this->authorizeCompanyWrite($request);
+        $inspection = $createInspection->handle($request->user(), $request->validated());
 
-        $validated = $request->validated();
-
-        $inspection = $user->inspections()->create($validated);
-
-        $this->handlePostInspectionActions($inspection);
-
-        return JsonResource::make($inspection->load('vehicle'))->response()->setStatusCode(201);
+        return InspectionResource::make($inspection->load('vehicle'))->response()->setStatusCode(201);
     }
 
     public function show(Request $request, Inspection $inspection)
     {
-        $this->authorizeResource($request, $inspection);
+        $this->authorizeCompanyRead($request, $inspection);
 
-        return JsonResource::make($inspection->load('vehicle'));
+        return InspectionResource::make($inspection->load('vehicle'));
     }
 
-    public function update(InspectionUpdateRequest $request, Inspection $inspection)
+    public function update(InspectionUpdateRequest $request, Inspection $inspection, UpdateInspection $updateInspection)
     {
-        $this->authorizeResource($request, $inspection);
+        $this->authorizeCompanyRead($request, $inspection);
+        $this->authorizeCompanyWrite($request);
 
-        $validated = $request->validated();
+        $inspection = $updateInspection->handle($request->user(), $inspection, $request->validated());
 
-        $inspection->update($validated);
-
-        $this->handlePostInspectionActions($inspection);
-
-        return JsonResource::make($inspection->load('vehicle'));
+        return InspectionResource::make($inspection->load('vehicle'));
     }
 
-    public function destroy(Request $request, Inspection $inspection)
+    public function destroy(Request $request, Inspection $inspection, DeleteInspection $deleteInspection)
     {
-        $this->authorizeResource($request, $inspection);
+        $this->authorizeCompanyRead($request, $inspection);
+        $this->authorizeCompanyWrite($request);
 
-        $inspection->delete();
+        $deleteInspection->handle($request->user(), $inspection);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeResource(Request $request, Inspection $inspection): void
-    {
-        if ($inspection->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
-    }
-
-    protected function handlePostInspectionActions(Inspection $inspection): void
-    {
-        // Update vehicle status based on inspection result
-        if ($inspection->vehicle_id) {
-            $status = match ($inspection->overall_status) {
-                'mantenimiento' => 'fuera_servicio',
-                default => null,
-            };
-
-            if ($status) {
-                Vehicle::where('id', $inspection->vehicle_id)
-                    ->where('user_id', $inspection->user_id)
-                    ->update(['status' => $status]);
-            }
-        }
-
-        // If inspection flagged issues, create a maintenance order so it follows the process
-        if ($inspection->overall_status === 'mantenimiento') {
-            $type = 'correctivo';
-            $priority = 'critica';
-            $hasOpenOrder = MaintenanceOrder::where('user_id', $inspection->user_id)
-                ->where('metadata->inspection_id', $inspection->id)
-                ->whereIn('status', ['pendiente', 'en_progreso'])
-                ->exists();
-
-            if ($hasOpenOrder) {
-                return;
-            }
-
-            MaintenanceOrder::create([
-                'user_id' => $inspection->user_id,
-                'vehicle_id' => $inspection->vehicle_id,
-                'order_number' => 'MNT-INS-' . now()->format('YmdHis'),
-                'type' => $type,
-                'priority' => $priority,
-                'status' => 'pendiente',
-                'description' => "Generado por inspección ({$inspection->overall_status})",
-                'mechanic' => $inspection->inspector,
-                'notes' => 'Orden creada automáticamente desde inspección.',
-                'metadata' => [
-                    'inspection_id' => $inspection->id,
-                ],
-            ]);
-        }
     }
 }

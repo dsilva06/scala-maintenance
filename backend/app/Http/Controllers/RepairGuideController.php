@@ -2,82 +2,63 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Actions\RepairGuides\CreateRepairGuide;
+use App\Actions\RepairGuides\DeleteRepairGuide;
+use App\Actions\RepairGuides\UpdateRepairGuide;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
+use App\Http\Resources\RepairGuideResource;
 use App\Models\RepairGuide;
+use App\Queries\RepairGuides\RepairGuideIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Requests\RepairGuideStoreRequest;
 use App\Http\Requests\RepairGuideUpdateRequest;
 
 class RepairGuideController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
-    public function index(Request $request)
+    public function index(Request $request, RepairGuideIndexQuery $repairGuideIndexQuery)
     {
-        $query = RepairGuide::query()
-            ->where('user_id', $request->user()->id);
+        $guides = $repairGuideIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        if ($category = $request->query('category')) {
-            $query->where('category', $category);
-        }
-
-        if ($type = $request->query('type')) {
-            $query->where('type', $type);
-        }
-
-        $this->applyQueryOptions($request, $query, [
-            'created_at', 'updated_at', 'name', 'priority',
-        ], [
-            'name', 'description', 'category', 'type',
-        ]);
-
-        return JsonResource::collection($query->get());
+        return RepairGuideResource::collection($guides);
     }
 
-    public function store(RepairGuideStoreRequest $request)
+    public function store(RepairGuideStoreRequest $request, CreateRepairGuide $createRepairGuide)
     {
-        $user = $request->user();
+        $this->authorizeCompanyWrite($request);
+        $guide = $createRepairGuide->handle($request->user(), $request->validated());
 
-        $validated = $request->validated();
-
-        $guide = $user->repairGuides()->create($validated);
-
-        return JsonResource::make($guide)->response()->setStatusCode(201);
+        return RepairGuideResource::make($guide)->response()->setStatusCode(201);
     }
 
     public function show(Request $request, RepairGuide $repairGuide)
     {
-        $this->authorizeResource($request, $repairGuide);
+        $this->authorizeCompanyRead($request, $repairGuide);
 
-        return JsonResource::make($repairGuide);
+        return RepairGuideResource::make($repairGuide);
     }
 
-    public function update(RepairGuideUpdateRequest $request, RepairGuide $repairGuide)
+    public function update(RepairGuideUpdateRequest $request, RepairGuide $repairGuide, UpdateRepairGuide $updateRepairGuide)
     {
-        $this->authorizeResource($request, $repairGuide);
+        $this->authorizeCompanyRead($request, $repairGuide);
+        $this->authorizeCompanyWrite($request);
 
-        $validated = $request->validated();
+        $repairGuide = $updateRepairGuide->handle($request->user(), $repairGuide, $request->validated());
 
-        $repairGuide->update($validated);
-
-        return JsonResource::make($repairGuide);
+        return RepairGuideResource::make($repairGuide);
     }
 
-    public function destroy(Request $request, RepairGuide $repairGuide)
+    public function destroy(Request $request, RepairGuide $repairGuide, DeleteRepairGuide $deleteRepairGuide)
     {
-        $this->authorizeResource($request, $repairGuide);
+        $this->authorizeCompanyRead($request, $repairGuide);
+        $this->authorizeCompanyWrite($request);
 
-        $repairGuide->delete();
+        $deleteRepairGuide->handle($request->user(), $repairGuide);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeResource(Request $request, RepairGuide $guide): void
-    {
-        if ($guide->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
     }
 }

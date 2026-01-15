@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
 use App\Models\AiAction;
 use App\Models\AiConversation;
 use App\Services\AiAgent\AiActionService;
@@ -10,9 +11,11 @@ use Illuminate\Http\Request;
 
 class AiActionController extends Controller
 {
+    use AuthorizesCompanyResource;
+
     public function index(Request $request, AiConversation $conversation): JsonResponse
     {
-        $this->authorizeConversation($request, $conversation);
+        $this->authorizeCompanyRead($request, $conversation);
 
         $actions = $conversation->actions()
             ->latest()
@@ -25,7 +28,7 @@ class AiActionController extends Controller
 
     public function confirm(Request $request, AiAction $action, AiActionService $service): JsonResponse
     {
-        $this->authorizeAction($request, $action);
+        $this->authorizeCompanyRead($request, $action);
 
         $action = $service->confirm($action, $request->user());
 
@@ -34,25 +37,11 @@ class AiActionController extends Controller
 
     public function cancel(Request $request, AiAction $action, AiActionService $service): JsonResponse
     {
-        $this->authorizeAction($request, $action);
+        $this->authorizeCompanyRead($request, $action);
 
         $action = $service->cancel($action);
 
         return response()->json(['data' => $this->serialize($action)]);
-    }
-
-    protected function authorizeConversation(Request $request, AiConversation $conversation): void
-    {
-        if ($conversation->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
-    }
-
-    protected function authorizeAction(Request $request, AiAction $action): void
-    {
-        if ($action->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
     }
 
     protected function serialize(AiAction $action): array

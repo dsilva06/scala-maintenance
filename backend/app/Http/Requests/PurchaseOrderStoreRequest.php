@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class PurchaseOrderStoreRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -14,21 +16,19 @@ class PurchaseOrderStoreRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->user()?->id;
-
         return [
             'order_number' => [
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('purchase_orders', 'order_number')->where('user_id', $userId),
+                $this->uniqueForUserCompany('purchase_orders', 'order_number'),
             ],
             'product_name' => ['required', 'string', 'max:150'],
             'supplier' => ['required_without:supplier_id', 'string', 'max:150'],
             'supplier_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('suppliers', 'id')->where('user_id', $userId),
+                $this->existsForUserCompany('suppliers', 'id'),
             ],
             'status' => ['nullable', 'string', 'max:50'],
             'priority' => ['nullable', 'string', 'max:50'],
@@ -38,7 +38,7 @@ class PurchaseOrderStoreRequest extends FormRequest
             'spare_part_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('spare_parts', 'id')->where('user_id', $userId),
+                $this->existsForUserCompany('spare_parts', 'id'),
             ],
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],

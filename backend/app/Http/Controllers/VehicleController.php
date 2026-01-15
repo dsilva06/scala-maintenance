@@ -2,48 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\HandlesQueryOptions;
+use App\Actions\Vehicles\CreateVehicle;
+use App\Actions\Vehicles\DeleteVehicle;
+use App\Actions\Vehicles\UpdateVehicle;
+use App\Http\Controllers\Concerns\AuthorizesCompanyResource;
+use App\Http\Resources\VehicleResource;
 use App\Models\Vehicle;
+use App\Queries\Vehicles\VehicleIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 use App\Http\Requests\VehicleStoreRequest;
 use App\Http\Requests\VehicleUpdateRequest;
 
 class VehicleController extends Controller
 {
-    use HandlesQueryOptions;
+    use AuthorizesCompanyResource;
 
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request, VehicleIndexQuery $vehicleIndexQuery)
     {
-        $query = Vehicle::query()->where('user_id', $request->user()->id);
+        $vehicles = $vehicleIndexQuery
+            ->handle($request, $request->user())
+            ->get();
 
-        $this->applyQueryOptions($request, $query, [
-            'created_at',
-            'updated_at',
-            'plate',
-            'brand',
-        ], [
-            'plate', 'brand', 'model', 'vin',
-        ]);
-
-        return JsonResource::collection($query->get());
+        return VehicleResource::collection($vehicles);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(VehicleStoreRequest $request)
+    public function store(VehicleStoreRequest $request, CreateVehicle $createVehicle)
     {
+        $this->authorizeCompanyWrite($request);
+
         $validated = $request->validated();
 
-        $vehicle = $request->user()->vehicles()->create($this->normalizePayload($validated));
+        $vehicle = $createVehicle->handle($request->user(), $validated);
 
-        return JsonResource::make($vehicle)->response()->setStatusCode(201);
+        return VehicleResource::make($vehicle)->response()->setStatusCode(201);
     }
 
     /**
@@ -51,56 +49,36 @@ class VehicleController extends Controller
      */
     public function show(Request $request, Vehicle $vehicle)
     {
-        $this->authorizeVehicle($request, $vehicle);
+        $this->authorizeCompanyRead($request, $vehicle);
 
-        return JsonResource::make($vehicle);
+        return VehicleResource::make($vehicle);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(VehicleUpdateRequest $request, Vehicle $vehicle)
+    public function update(VehicleUpdateRequest $request, Vehicle $vehicle, UpdateVehicle $updateVehicle)
     {
-        $this->authorizeVehicle($request, $vehicle);
+        $this->authorizeCompanyRead($request, $vehicle);
+        $this->authorizeCompanyWrite($request);
 
         $validated = $request->validated();
 
-        $vehicle->update($this->normalizePayload($validated));
+        $vehicle = $updateVehicle->handle($request->user(), $vehicle, $validated);
 
-        return JsonResource::make($vehicle);
+        return VehicleResource::make($vehicle);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, Vehicle $vehicle)
+    public function destroy(Request $request, Vehicle $vehicle, DeleteVehicle $deleteVehicle)
     {
-        $this->authorizeVehicle($request, $vehicle);
+        $this->authorizeCompanyRead($request, $vehicle);
+        $this->authorizeCompanyWrite($request);
 
-        $vehicle->delete();
+        $deleteVehicle->handle($request->user(), $vehicle);
 
         return new JsonResponse(null, 204);
-    }
-
-    protected function authorizeVehicle(Request $request, Vehicle $vehicle): void
-    {
-        if ($vehicle->user_id !== $request->user()->id) {
-            abort(403, 'No autorizado.');
-        }
-    }
-
-    protected function normalizePayload(array $attributes): array
-    {
-        if (array_key_exists('plate', $attributes)) {
-            $attributes['plate'] = Str::upper(trim($attributes['plate']));
-        }
-
-        foreach (['brand', 'model', 'color', 'vin', 'vehicle_type', 'status', 'fuel_type', 'assigned_driver'] as $key) {
-            if (array_key_exists($key, $attributes) && is_string($attributes[$key])) {
-                $attributes[$key] = trim($attributes[$key]);
-            }
-        }
-
-        return $attributes;
     }
 }
