@@ -116,7 +116,7 @@ More backend usage details live in `docs/BACKEND.md`.
 - Frontend: `npm run test` (Vitest) or `npm run test:watch`.
 - Backend: `make backend-test` (Docker) or `php artisan test` (native).
 
-## Espanol
+## Español
 
 ### Requisitos previos
 
