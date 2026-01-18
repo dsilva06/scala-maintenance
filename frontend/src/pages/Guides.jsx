@@ -13,6 +13,7 @@ import { BookOpen, Settings, Plus, Search, Package, AlertCircle, CheckCircle } f
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
 import RepairGuideForm from "../components/maintenance/RepairGuideForm";
+import { getErrorMessage } from "@/lib/errors";
 
 function CreateOrderFromGuideModal({ guide, vehicles, spareParts, isOpen, onOpenChange, onOrderCreated }) {
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
@@ -56,7 +57,9 @@ function CreateOrderFromGuideModal({ guide, vehicles, spareParts, isOpen, onOpen
 
   const handleSubmit = async () => {
     if (!selectedVehicleId) {
-      toast.error("Debes seleccionar un vehículo.");
+      toast.warning("Campos requeridos", {
+        description: "Por favor, selecciona un vehículo para crear la orden."
+      });
       return;
     }
     
@@ -78,7 +81,9 @@ function CreateOrderFromGuideModal({ guide, vehicles, spareParts, isOpen, onOpen
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating maintenance order:", error);
-      toast.error("No se pudo crear la orden de mantenimiento.");
+      toast.error("No se pudo crear la orden de mantenimiento.", {
+        description: getErrorMessage(error, "Intenta nuevamente.")
+      });
     }
   };
 
@@ -217,7 +222,9 @@ export default function Guides() {
       setSpareParts(partsData);
     } catch (error) {
       console.error("Error loading data:", error);
-      toast.error("Error al cargar las guías y datos relacionados.");
+      toast.error("Error al cargar las guías y datos relacionados.", {
+        description: getErrorMessage(error, "No se pudieron cargar las guias.")
+      });
     } finally {
       setIsLoading(false);
     }
@@ -243,7 +250,9 @@ export default function Guides() {
       loadData();
     } catch (error) {
       console.error("Error saving repair guide:", error);
-      toast.error("Error al guardar la guía de reparación.");
+      toast.error("Error al guardar la guía de reparación.", {
+        description: getErrorMessage(error, "No se pudo guardar la guia.")
+      });
     }
   };
 

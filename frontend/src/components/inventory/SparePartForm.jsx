@@ -110,7 +110,9 @@ export default function SparePartForm({ part, onSubmit, onCancel, existingParts 
       };
       onSubmit(dataToSubmit);
     } else {
-      toast.warning("Revisa los errores en el formulario.");
+      toast.warning("Campos requeridos", {
+        description: "Por favor, complete los campos obligatorios y revise los errores marcados."
+      });
     }
   };
 

@@ -7,6 +7,7 @@ import { Alert, Document } from '@/api/entities';
 import { updateSparePart } from '@/api/spareParts';
 import { createMaintenanceOrder } from '@/api/maintenanceOrders';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 export default function AlertCard({ alert, onUpdate }) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -89,7 +90,9 @@ export default function AlertCard({ alert, onUpdate }) {
       }
     } catch (error) {
       console.error('Error applying alert action:', error);
-      toast.error('Error al aplicar la acción');
+      toast.error('Error al aplicar la acción', {
+        description: getErrorMessage(error, 'Intenta nuevamente.')
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -106,7 +109,9 @@ export default function AlertCard({ alert, onUpdate }) {
       onUpdate(alert.id, 'ignored');
     } catch (error) {
       console.error('Error ignoring alert:', error);
-      toast.error('Error al ignorar la alerta');
+      toast.error('Error al ignorar la alerta', {
+        description: getErrorMessage(error, 'Intenta nuevamente.')
+      });
     }
   };
 

@@ -83,8 +83,10 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.category || !formData.description) {
-        toast.error("Por favor, complete los campos obligatorios: Nombre, Categoría y Descripción.");
-        return;
+      toast.warning("Campos requeridos", {
+        description: "Por favor, complete los campos de Nombre, Categoría y Descripción."
+      });
+      return;
     }
     // Auto-generate keywords from name
     const keywords = formData.name.toLowerCase().split(" ").filter(word => word.length > 2);
