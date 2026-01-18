@@ -9,6 +9,7 @@ import { ShoppingCart, Plus, Search, Filter, Package, AlertTriangle, CheckCircle
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { PurchaseOrder, SparePart, Supplier } from "@/api/entities";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function Purchases() {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -59,7 +60,9 @@ export default function Purchases() {
       setPurchaseOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error loading purchase orders:", error);
-      toast.error("Error al cargar las órdenes de compra");
+      toast.error("Error al cargar las órdenes de compra", {
+        description: getErrorMessage(error, "No se pudieron cargar las ordenes.")
+      });
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +78,9 @@ export default function Purchases() {
       setSpareParts(Array.isArray(sparePartsData) ? sparePartsData : []);
     } catch (error) {
       console.error("Error loading suppliers or spare parts:", error);
-      toast.error("Error al cargar proveedores o repuestos.");
+      toast.error("Error al cargar proveedores o repuestos.", {
+        description: getErrorMessage(error, "No se pudo cargar la informacion.")
+      });
     }
   };
 
@@ -201,8 +206,9 @@ export default function Purchases() {
       loadPurchaseOrders();
     } catch (error) {
       console.error("Error saving purchase order:", error);
-      const message = error.data?.message || "No se pudo guardar la orden de compra.";
-      toast.error(message);
+      toast.error("Error al guardar la orden de compra.", {
+        description: getErrorMessage(error, "No se pudo guardar la orden de compra.")
+      });
     }
   };
 
@@ -214,13 +220,17 @@ export default function Purchases() {
       loadPurchaseOrders();
     } catch (error) {
       console.error("Error deleting purchase order:", error);
-      toast.error("No se pudo eliminar la orden.");
+      toast.error("No se pudo eliminar la orden.", {
+        description: getErrorMessage(error, "Intenta nuevamente.")
+      });
     }
   };
 
   const handleCreateSupplier = async () => {
     if (!supplierDraft.name.trim()) {
-      toast.warning("Ingresa un nombre de proveedor.");
+      toast.warning("Campos requeridos", {
+        description: "Por favor, ingresa el nombre del proveedor."
+      });
       return;
     }
     try {
@@ -242,8 +252,9 @@ export default function Purchases() {
       toast.success("Proveedor agregado.");
     } catch (error) {
       console.error("Error creating supplier:", error);
-      const message = error.data?.message || "No se pudo crear el proveedor.";
-      toast.error(message);
+      toast.error("No se pudo crear el proveedor.", {
+        description: getErrorMessage(error, "Intenta nuevamente.")
+      });
     }
   };
 

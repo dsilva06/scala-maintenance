@@ -55,25 +55,54 @@ export default function Dashboard() {
   }, []);
 
   const loadDashboardData = async () => {
-    try {
-      const [vehiclesData, ordersData, inspectionsData, partsData, documentsData] = await Promise.all([
-        Vehicle.list('-created_at', 500),
-        listMaintenanceOrders({ sort: '-created_at', limit: 500 }),
-        Inspection.list('-inspection_date', 200), // Optimization: Limit data load
-        listSpareParts({ sort: '-created_at', limit: 1000 }),
-        Document.list('-expiration_date', 500) // Optimization: Limit data load
-      ]);
+    setIsLoading(true);
+    const results = await Promise.allSettled([
+      Vehicle.list('-created_at', 500),
+      listMaintenanceOrders({ sort: '-created_at', limit: 500 }),
+      Inspection.list('-inspection_date', 200), // Optimization: Limit data load
+      listSpareParts({ sort: '-created_at', limit: 1000 }),
+      Document.list('-expiration_date', 500), // Optimization: Limit data load
+    ]);
 
-      setVehicles(vehiclesData);
-      setMaintenanceOrders(ordersData);
-      setInspections(inspectionsData);
-      setSpareParts(partsData);
-      setDocuments(documentsData);
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-    } finally {
-      setIsLoading(false);
+    const [
+      vehiclesResult,
+      ordersResult,
+      inspectionsResult,
+      partsResult,
+      documentsResult,
+    ] = results;
+
+    if (vehiclesResult.status === 'fulfilled') {
+      setVehicles(Array.isArray(vehiclesResult.value) ? vehiclesResult.value : []);
+    } else {
+      console.error("Error loading vehicles data:", vehiclesResult.reason);
     }
+
+    if (ordersResult.status === 'fulfilled') {
+      setMaintenanceOrders(Array.isArray(ordersResult.value) ? ordersResult.value : []);
+    } else {
+      console.error("Error loading maintenance orders data:", ordersResult.reason);
+    }
+
+    if (inspectionsResult.status === 'fulfilled') {
+      setInspections(Array.isArray(inspectionsResult.value) ? inspectionsResult.value : []);
+    } else {
+      console.error("Error loading inspections data:", inspectionsResult.reason);
+    }
+
+    if (partsResult.status === 'fulfilled') {
+      setSpareParts(Array.isArray(partsResult.value) ? partsResult.value : []);
+    } else {
+      console.error("Error loading spare parts data:", partsResult.reason);
+    }
+
+    if (documentsResult.status === 'fulfilled') {
+      setDocuments(Array.isArray(documentsResult.value) ? documentsResult.value : []);
+    } else {
+      console.error("Error loading documents data:", documentsResult.reason);
+    }
+
+    setIsLoading(false);
   };
 
   const loadWidgetPreferences = () => {

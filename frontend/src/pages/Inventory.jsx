@@ -8,7 +8,8 @@ import SparePartForm from "../components/inventory/SparePartForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, CheckCircle, TrendingUp, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner"; 
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function Inventory() {
   const [parts, setParts] = useState([]);
@@ -70,9 +71,9 @@ export default function Inventory() {
       loadParts();
     } catch (error) {
       console.error("Error saving spare part:", error);
-      // Extraer mensaje de error específico si es posible
-      const errorMessage = error.response?.data?.message || 'Error al guardar el repuesto. Inténtalo de nuevo.';
-      toast.error('Error al guardar', { description: errorMessage });
+      toast.error('Error al guardar', {
+        description: getErrorMessage(error, 'Error al guardar el repuesto. Intentalo de nuevo.')
+      });
     }
   };
 
@@ -89,7 +90,9 @@ export default function Inventory() {
       loadParts();
     } catch (error) {
       console.error('Error deleting spare part:', error);
-      toast.error('No se pudo eliminar el repuesto');
+      toast.error('No se pudo eliminar el repuesto', {
+        description: getErrorMessage(error, 'Intenta nuevamente.')
+      });
     }
   };
   

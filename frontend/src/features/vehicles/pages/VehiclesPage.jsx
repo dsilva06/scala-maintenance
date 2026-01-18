@@ -81,7 +81,9 @@ export default function VehiclesPage() {
       setEditingVehicle(null);
     } catch (error) {
       console.error('Error saving vehicle:', error);
-      toast.error(getErrorMessage(error, 'Error al guardar el vehículo'));
+      toast.error('Error al guardar el vehículo', {
+        description: getErrorMessage(error, 'No se pudo guardar el vehiculo.')
+      });
     }
   };
 
@@ -96,7 +98,9 @@ export default function VehiclesPage() {
         await deleteVehicleMutation.mutateAsync(vehicleId);
       } catch (error) {
         console.error('Error deleting vehicle:', error);
-        toast.error(getErrorMessage(error, 'Error al eliminar el vehículo'));
+        toast.error('Error al eliminar el vehículo', {
+          description: getErrorMessage(error, 'No se pudo eliminar el vehiculo.')
+        });
       }
     }
   };

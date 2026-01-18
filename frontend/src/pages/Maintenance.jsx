@@ -5,6 +5,7 @@ import { listVehicles } from "@/api/vehicles";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errors";
 
 import MaintenanceKanban from "../components/maintenance/MaintenanceKanban";
 import MaintenanceOrderForm from "../components/maintenance/MaintenanceOrderForm";
@@ -35,7 +36,9 @@ export default function Maintenance() {
       setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
     } catch (error) {
       console.error("Error loading maintenance data:", error);
-      toast.error("Error al cargar los datos de mantenimiento.");
+      toast.error("Error al cargar los datos de mantenimiento.", {
+        description: getErrorMessage(error, "No se pudo cargar la informacion de mantenimiento.")
+      });
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +59,9 @@ export default function Maintenance() {
       loadData();
     } catch (error) {
       console.error("Error saving maintenance order:", error);
-      toast.error("Error al guardar la orden de mantenimiento");
+      toast.error("Error al guardar la orden de mantenimiento", {
+        description: getErrorMessage(error, "No se pudo guardar la orden.")
+      });
     }
   };
 
@@ -71,7 +76,9 @@ export default function Maintenance() {
       loadData();
     } catch (error) {
       console.error("Error updating order status:", error);
-      toast.error("No se pudo actualizar el estado");
+      toast.error("No se pudo actualizar el estado", {
+        description: getErrorMessage(error, "Intenta nuevamente.")
+      });
     }
   };
 

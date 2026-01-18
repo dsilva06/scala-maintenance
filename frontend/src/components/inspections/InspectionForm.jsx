@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, ClipboardCheck, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errors";
 
 import AddItemPanel from './AddItemPanel';
 import ChecklistItem from './ChecklistItem';
@@ -74,17 +76,23 @@ export default function InspectionForm({ inspection, vehicles, onSubmit, onCance
     
     // Validaciones
     if (!formData.vehicle_id) {
-      alert('Por favor selecciona un vehículo');
+      toast.warning("Campos requeridos", {
+        description: "Por favor, selecciona un vehículo."
+      });
       return;
     }
     
     if (!formData.inspector.trim()) {
-      alert('El campo Inspector es obligatorio');
+      toast.warning("Campos requeridos", {
+        description: "Por favor, complete el campo Inspector."
+      });
       return;
     }
     
     if (formData.checklist_items.length === 0) {
-      alert('Debes añadir al menos un ítem al checklist');
+      toast.warning("Campos requeridos", {
+        description: "Por favor, agrega al menos un ítem al checklist."
+      });
       return;
     }
     
@@ -115,7 +123,9 @@ export default function InspectionForm({ inspection, vehicles, onSubmit, onCance
       
     } catch (error) {
       console.error("Error al guardar la inspección:", error);
-      alert('Error al guardar la inspección. Por favor intenta de nuevo.');
+      toast.error("Error al guardar la inspección.", {
+        description: getErrorMessage(error, "Por favor intenta de nuevo.")
+      });
     } finally {
       setIsSaving(false);
     }

@@ -10,6 +10,7 @@ import { BookOpen, Search, CheckCircle, AlertTriangle, ArrowRight, Package, Cloc
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { getErrorMessage } from "@/lib/errors";
 
 import RequiredMaterialsPanel from "../components/maintenance-guides/RequiredMaterialsPanel";
 import GuideChecklist from "../components/maintenance-guides/GuideChecklist";
@@ -44,7 +45,9 @@ export default function MaintenanceGuides() {
       setVehicles(vehiclesData);
     } catch (error) {
       console.error("Error loading data:", error);
-      toast.error("Error al cargar los datos");
+      toast.error("Error al cargar los datos", {
+        description: getErrorMessage(error, "No se pudieron cargar las guias.")
+      });
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +61,9 @@ export default function MaintenanceGuides() {
       loadData(); // Recargar las guías para mostrar la nueva
     } catch (error) {
       console.error("Error saving repair guide:", error);
-      toast.error("Error al guardar la guía de mantenimiento.");
+      toast.error("Error al guardar la guía de mantenimiento.", {
+        description: getErrorMessage(error, "No se pudo guardar la guia.")
+      });
     }
   };
 
@@ -83,7 +88,9 @@ export default function MaintenanceGuides() {
       toast.success("Preparación completada. Redirigiendo a Mantenimiento...");
     } catch (error) {
       console.error("Error en preparación:", error);
-      toast.error("Error al preparar la guía");
+      toast.error("Error al preparar la guía", {
+        description: getErrorMessage(error, "No se pudo continuar con la preparacion.")
+      });
     }
   };
 

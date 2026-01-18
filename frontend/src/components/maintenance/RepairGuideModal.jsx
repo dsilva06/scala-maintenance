@@ -23,6 +23,7 @@ import { RepairGuide } from '@/api/entities';
 import { listSpareParts, updateSparePart } from '@/api/spareParts';
 import { getMaintenanceOrder, updateMaintenanceOrder } from '@/api/maintenanceOrders';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, onUpdateInventory }) {
   const [guides, setGuides] = useState([]);
@@ -191,7 +192,9 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
       onClose();
     } catch (error) {
       console.error("Error updating inventory:", error);
-      toast.error("Error al finalizar la reparación y actualizar el inventario.");
+      toast.error("Error al finalizar la reparación y actualizar el inventario.", {
+        description: getErrorMessage(error, "No se pudo actualizar el inventario.")
+      });
     }
   };
 

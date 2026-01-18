@@ -120,7 +120,9 @@ export default function TripsPage() {
       setEditingTrip(null);
     } catch (error) {
       console.error('Error saving trip:', error);
-      toast.error(getErrorMessage(error, 'Error al guardar el viaje'));
+      toast.error('Error al guardar el viaje', {
+        description: getErrorMessage(error, 'No se pudo guardar el viaje.')
+      });
     }
   };
 

@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import DocumentsTable from "../components/documents/DocumentsTable";
 import DocumentForm from "../components/documents/DocumentForm";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function Documents() {
   const [documents, setDocuments] = useState([]);
@@ -29,7 +30,9 @@ export default function Documents() {
       setVehicles(vehiclesData);
     } catch (error) {
       console.error("Error loading documents data:", error);
-      toast.error("Error al cargar los datos.");
+      toast.error("Error al cargar los datos.", {
+        description: getErrorMessage(error, "No se pudieron cargar los documentos.")
+      });
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +52,9 @@ export default function Documents() {
       loadData();
     } catch (error) {
       console.error("Error saving document:", error);
-      toast.error("Error al guardar el documento.");
+      toast.error("Error al guardar el documento.", {
+        description: getErrorMessage(error, "No se pudo guardar el documento.")
+      });
     }
   };
 
@@ -66,7 +71,9 @@ export default function Documents() {
         loadData();
       } catch (error) {
         console.error("Error deleting document:", error);
-        toast.error("Error al eliminar el documento.");
+        toast.error("Error al eliminar el documento.", {
+          description: getErrorMessage(error, "No se pudo eliminar el documento.")
+        });
       }
     }
   };

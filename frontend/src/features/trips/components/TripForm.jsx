@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import LocationSearchInput from "./LocationSearchInput"; // New import for LocationSearchInput
+import { toast } from "sonner";
 
 // Configurar iconos de Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -202,7 +203,9 @@ export default function TripForm({ trip, vehicles, onSubmit, onCancel }) {
     
     // Validación básica
     if (!formData.vehicle_id || !formData.driver_name || !formData.origin || !formData.destination) {
-      alert("Por favor completa todos los campos requeridos");
+      toast.warning("Campos requeridos", {
+        description: "Por favor, complete vehículo, conductor, origen y destino."
+      });
       return;
     }
 
