@@ -90,6 +90,24 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
     });
   };
 
+  const resolvePart = (requiredPart, parts) => {
+    const byId = parts.find((p) => String(p.id) === String(requiredPart.part_id));
+    if (byId && requiredPart.part_name && byId.name !== requiredPart.part_name) {
+      const byName = parts.find((p) => p.name === requiredPart.part_name);
+      if (byName) return byName;
+    }
+    if (byId) return byId;
+    if (requiredPart.part_sku) {
+      const bySku = parts.find((p) => p.sku === requiredPart.part_sku);
+      if (bySku) return bySku;
+    }
+    if (requiredPart.part_name) {
+      const byName = parts.find((p) => p.name === requiredPart.part_name);
+      if (byName) return byName;
+    }
+    return null;
+  };
+
   const checkInventoryAvailability = (guide, parts) => {
     const check = {
       canExecute: true,
@@ -98,8 +116,8 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
       warnings: []
     };
 
-    guide.required_parts?.forEach(requiredPart => {
-      const inventoryPart = parts.find(p => p.id === requiredPart.part_id);
+    guide.required_parts?.forEach((requiredPart) => {
+      const inventoryPart = resolvePart(requiredPart, parts);
       
       if (!inventoryPart) {
         check.canExecute = false;
@@ -165,6 +183,7 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
         partsUsedForLog.push({
           part_id: availablePart.part.id,
           name: availablePart.part.name,
+          category: availablePart.part.category,
           quantity: availablePart.quantity_needed,
           unit_cost: availablePart.part.unit_cost
         });
@@ -173,15 +192,15 @@ export default function RepairGuideModal({ isOpen, onClose, maintenanceOrder, on
       // 2. Actualizar la orden de mantenimiento con los repuestos usados
       if (partsUsedForLog.length > 0) {
         const currentOrder = await getMaintenanceOrder(maintenanceOrder.id);
-        const existingMetadata = currentOrder.metadata || {};
-        const currentPartsUsed = Array.isArray(existingMetadata.parts_used) ? existingMetadata.parts_used : [];
-        const updatedPartsUsed = [...currentPartsUsed, ...partsUsedForLog];
+        const currentParts = Array.isArray(currentOrder.parts)
+          ? currentOrder.parts
+          : Array.isArray(currentOrder?.metadata?.parts_used)
+          ? currentOrder.metadata.parts_used
+          : [];
+        const updatedParts = [...currentParts, ...partsUsedForLog];
 
         await updateMaintenanceOrder(maintenanceOrder.id, {
-          metadata: {
-            ...existingMetadata,
-            parts_used: updatedPartsUsed,
-          },
+          parts: updatedParts,
         });
       }
       

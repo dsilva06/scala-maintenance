@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useMemo } from "react";
-import { Vehicle, Inspection, Document } from "@/api/entities";
+import { useRef, useState, useEffect, useMemo } from "react";
+import { Vehicle, Document } from "@/api/entities";
 import { listMaintenanceOrders } from "@/api/maintenanceOrders";
 import { listSpareParts } from "@/api/spareParts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import {
   Car,
   Settings,
   AlertTriangle,
-  CheckCircle,
   TrendingUp,
   Calendar,
   Activity,
@@ -24,8 +23,10 @@ import VehicleStatusCard from "../components/dashboard/VehicleStatusCard";
 import AlertsPanel from "../components/dashboard/AlertsPanel";
 import AIInsights from "../components/dashboard/AIInsights";
 import SmartFlowWidget from "../components/dashboard/SmartFlowWidget"; // New component for Smart Flow
-import AIAssistantPanel from "../components/ai/AIAssistantPanel";
+// AI assistant disabled for this release; keep import for later integration.
+// import AIAssistantPanel from "../components/ai/AIAssistantPanel";
 import AnalyticsOverview from "../components/dashboard/AnalyticsOverview";
+import MaintenanceCalendar from "../components/dashboard/MaintenanceCalendar";
 
 // Configuración de widgets por defecto
 const defaultWidgets = [
@@ -35,44 +36,79 @@ const defaultWidgets = [
   { id: 'alerts', name: 'Alertas' },
   { id: 'maintenance-calendar', name: 'Próximos Mantenimientos' },
   { id: 'ai-insights', name: 'FLOTA AI Insights' },
-  { id: 'ai-assistant', name: 'FLOTA AI Asistente' },
+  // { id: 'ai-assistant', name: 'FLOTA AI Asistente' },
   { id: 'smart-flow', name: 'Guías y Flujo de Órdenes Inteligente' }, // New Widget
 ];
 
 export default function Dashboard() {
   const [vehicles, setVehicles] = useState([]);
   const [maintenanceOrders, setMaintenanceOrders] = useState([]);
-  const [inspections, setInspections] = useState([]);
   const [spareParts, setSpareParts] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [widgets, setWidgets] = useState(defaultWidgets);
   const [editMode, setEditMode] = useState(false);
+  const loadInFlightRef = useRef(false);
+  const refreshIntervalMs = 30000;
 
   useEffect(() => {
-    loadDashboardData();
+    loadDashboardData({ showLoader: true });
     loadWidgetPreferences();
+    const intervalId = setInterval(() => {
+      loadDashboardData({ showLoader: false });
+    }, refreshIntervalMs);
+
+    return () => clearInterval(intervalId);
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async ({ showLoader } = {}) => {
+    if (loadInFlightRef.current) {
+      return;
+    }
+    loadInFlightRef.current = true;
+    if (showLoader) {
+      setIsLoading(true);
+    }
     try {
-      const [vehiclesData, ordersData, inspectionsData, partsData, documentsData] = await Promise.all([
+      const results = await Promise.allSettled([
         Vehicle.list('-created_at', 500),
         listMaintenanceOrders({ sort: '-created_at', limit: 500 }),
-        Inspection.list('-inspection_date', 200), // Optimization: Limit data load
         listSpareParts({ sort: '-created_at', limit: 1000 }),
         Document.list('-expiration_date', 500) // Optimization: Limit data load
       ]);
 
-      setVehicles(vehiclesData);
-      setMaintenanceOrders(ordersData);
-      setInspections(inspectionsData);
-      setSpareParts(partsData);
-      setDocuments(documentsData);
+      const [vehiclesResult, ordersResult, partsResult, documentsResult] = results;
+
+      if (vehiclesResult.status === 'fulfilled') {
+        setVehicles(vehiclesResult.value ?? []);
+      } else {
+        console.error('Error loading vehicles:', vehiclesResult.reason);
+      }
+
+      if (ordersResult.status === 'fulfilled') {
+        setMaintenanceOrders(ordersResult.value ?? []);
+      } else {
+        console.error('Error loading maintenance orders:', ordersResult.reason);
+      }
+
+      if (partsResult.status === 'fulfilled') {
+        setSpareParts(partsResult.value ?? []);
+      } else {
+        console.error('Error loading spare parts:', partsResult.reason);
+      }
+
+      if (documentsResult.status === 'fulfilled') {
+        setDocuments(documentsResult.value ?? []);
+      } else {
+        console.error('Error loading documents:', documentsResult.reason);
+      }
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
-      setIsLoading(false);
+      if (showLoader) {
+        setIsLoading(false);
+      }
+      loadInFlightRef.current = false;
     }
   };
 
@@ -153,38 +189,9 @@ export default function Dashboard() {
     return { expiringSoon, lowStock, criticalOrders };
   };
 
-  const getWeeklyMaintenanceFromInspections = () => {
-    const today = new Date();
-    // Reset time to start of day for accurate date comparison
-    today.setHours(0, 0, 0, 0);
-    const dayOfWeek = today.getDay(); // 0 for Sunday, 1 for Monday, etc.
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday (make it last day of prev week)
-
-    const weekStart = new Date(today.setDate(diff));
-    weekStart.setHours(0,0,0,0); // Ensure start of the day
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23,59,59,999); // Ensure end of the day
-
-    const weeklyInspections = inspections.filter(inspection => {
-      const inspectionDate = new Date(inspection.inspection_date);
-      // Reset time for inspectionDate too for accurate comparison
-      inspectionDate.setHours(0,0,0,0);
-      return inspectionDate >= weekStart && inspectionDate <= weekEnd;
-    });
-
-    const maintenanceNeeded = weeklyInspections.filter(inspection =>
-      inspection.overall_status === 'malo' || inspection.overall_status === 'critico'
-    );
-
-    return maintenanceNeeded.length > 0 ? maintenanceNeeded : null;
-  };
-
   const vehicleStats = useMemo(() => getVehicleStats(), [vehicles]);
   const maintenanceStats = useMemo(() => getMaintenanceStats(), [maintenanceOrders]);
   const alerts = useMemo(() => getCriticalAlerts(), [documents, spareParts, maintenanceOrders]);
-  const weeklyMaintenance = useMemo(() => getWeeklyMaintenanceFromInspections(), [inspections, vehicles]);
   const fleetEfficiency = useMemo(() => getFleetEfficiency(), [vehicles]);
 
   const renderWidget = (widget) => {
@@ -261,27 +268,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {weeklyMaintenance ? (
-                  <div className="space-y-3">
-                    {weeklyMaintenance.map((inspection, idx) => (
-                      <div key={idx} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                        <p className="font-medium text-orange-900">
-                          Mantenimiento requerido por inspección
-                        </p>
-                        <p className="text-sm text-orange-700">
-                          Vehículo: {vehicles.find(v => v.id === inspection.vehicle_id)?.plate} -
-                          Estado: {inspection.overall_status}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                    <p className="text-green-600 font-medium">Todo bien por esta semana</p>
-                    <p className="text-sm text-gray-500">No hay mantenimientos críticos derivados de inspecciones</p>
-                  </div>
-                )}
+                <MaintenanceCalendar orders={maintenanceOrders} vehicles={vehicles} />
               </CardContent>
             </Card>
           );
@@ -312,20 +299,20 @@ export default function Dashboard() {
             />
           );
 
-        case 'ai-assistant':
-          return (
-            <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-indigo-600" />
-                  Asistente IA (scaffold)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AIAssistantPanel />
-              </CardContent>
-            </Card>
-          );
+        // case 'ai-assistant':
+        //   return (
+        //     <Card className="shadow-sm">
+        //       <CardHeader className="pb-3">
+        //         <CardTitle className="flex items-center gap-2">
+        //           <Activity className="w-5 h-5 text-indigo-600" />
+        //           Asistente IA (scaffold)
+        //         </CardTitle>
+        //       </CardHeader>
+        //       <CardContent>
+        //         <AIAssistantPanel />
+        //       </CardContent>
+        //     </Card>
+        //   );
 
         case 'smart-flow': // New case for Smart Flow Widget
           return (

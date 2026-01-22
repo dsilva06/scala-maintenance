@@ -25,14 +25,34 @@ export default function RequiredMaterialsPanel({ guide, spareParts, selectedVehi
     let hasBlocking = false;
     let hasWarnings = false;
 
+    const resolvePart = (requiredPart) => {
+      const byId = spareParts.find((p) => String(p.id) === String(requiredPart.part_id));
+      if (byId && requiredPart.part_name && byId.name !== requiredPart.part_name) {
+        const byName = spareParts.find((p) => p.name === requiredPart.part_name);
+        if (byName) return byName;
+      }
+      if (byId) return byId;
+      if (requiredPart.part_sku) {
+        const bySku = spareParts.find((p) => p.sku === requiredPart.part_sku);
+        if (bySku) return bySku;
+      }
+      if (requiredPart.part_name) {
+        const byName = spareParts.find((p) => p.name === requiredPart.part_name);
+        if (byName) return byName;
+      }
+      return null;
+    };
+
     for (const requiredPart of guide.required_parts) {
-      const part = spareParts.find(p => p.id === requiredPart.part_id);
+      const part = resolvePart(requiredPart);
       if (!part) {
         analysis[requiredPart.part_id] = {
           status: 'not_found',
           required: requiredPart.quantity_needed,
           available: 0,
-          message: 'Repuesto no encontrado'
+          message: 'Repuesto no encontrado',
+          displayName: requiredPart.part_name || 'Material no identificado',
+          displaySku: requiredPart.part_sku || null,
         };
         hasBlocking = true;
         continue;
@@ -71,7 +91,9 @@ export default function RequiredMaterialsPanel({ guide, spareParts, selectedVehi
         required: requiredPart.quantity_needed,
         available: projectedStock,
         afterUsage,
-        is_critical: requiredPart.is_critical
+        is_critical: requiredPart.is_critical,
+        displayName: requiredPart.part_name || part.name,
+        displaySku: requiredPart.part_sku || part.sku,
       };
 
       // Buscar sustitutos si es necesario
@@ -186,8 +208,8 @@ export default function RequiredMaterialsPanel({ guide, spareParts, selectedVehi
           <Alert className="border-red-200 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-800">
-              <strong>No se puede continuar:</strong> Hay materiales insuficientes o no encontrados. 
-              Resuelva los problemas antes de proceder.
+              <strong>Materiales insuficientes:</strong> Hay materiales faltantes o no encontrados.
+              Se recomienda resolverlos antes de iniciar.
             </AlertDescription>
           </Alert>
         )}
@@ -221,7 +243,7 @@ export default function RequiredMaterialsPanel({ guide, spareParts, selectedVehi
                     {getStatusIcon(analysis.status)}
                     <div>
                       <h4 className="font-medium text-gray-900">
-                        {analysis.part?.name || 'Material no identificado'}
+                        {analysis.displayName || analysis.part?.name || 'Material no identificado'}
                         {analysis.is_critical && (
                           <Badge variant="outline" className="ml-2 text-xs border-red-300 text-red-700">
                             Crítico
@@ -229,7 +251,7 @@ export default function RequiredMaterialsPanel({ guide, spareParts, selectedVehi
                         )}
                       </h4>
                       <p className="text-sm text-gray-600">
-                        SKU: {analysis.part?.sku || 'N/A'}
+                        SKU: {analysis.displaySku || analysis.part?.sku || 'N/A'}
                       </p>
                     </div>
                   </div>

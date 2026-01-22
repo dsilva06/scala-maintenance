@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingCart, Plus, Search, Filter, Package, AlertTriangle, CheckCircle, Clock, Edit, Trash2, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { ShoppingCart, Plus, Search, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import { PurchaseOrder, SparePart, Supplier } from "@/api/entities";
+import PurchaseOrdersKanban from "@/components/purchases/PurchaseOrdersKanban";
 
 export default function Purchases() {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -16,6 +15,8 @@ export default function Purchases() {
   const [spareParts, setSpareParts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+  const [sparePartFilter, setSparePartFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -36,7 +37,7 @@ export default function Purchases() {
     supplier_id: "",
     product_name: "",
     spare_part_id: "",
-    status: "draft",
+    status: "pending",
     priority: "media",
     total_cost: 0,
     items_count: 1,
@@ -79,33 +80,59 @@ export default function Purchases() {
     }
   };
 
-  const getStatusConfig = (status) => {
-    switch (status) {
-      case 'draft':
-        return { label: 'Borrador', color: 'bg-gray-100 text-gray-800', icon: Clock };
-      case 'pending':
-        return { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle };
-      case 'sent':
-        return { label: 'Enviada', color: 'bg-blue-100 text-blue-800', icon: Package };
-      case 'partial':
-        return { label: 'Parcial', color: 'bg-orange-100 text-orange-800', icon: Package };
-      case 'received':
-        return { label: 'Recibida', color: 'bg-green-100 text-green-800', icon: CheckCircle };
-      case 'closed':
-        return { label: 'Cerrada', color: 'bg-gray-100 text-gray-500', icon: CheckCircle };
-      default:
-        return { label: status, color: 'bg-gray-100 text-gray-800', icon: Clock };
+  const normalizePurchaseStatus = (status) => {
+    const normalized = (status || "").toLowerCase();
+    if (normalized === "draft") return "pending";
+    if (normalized === "partial") return "sent";
+    if (["cancelada", "cancelado", "canceled"].includes(normalized)) return "cancelled";
+    if (["pending", "sent", "received", "closed", "cancelled"].includes(normalized)) {
+      return normalized;
     }
+    return "pending";
   };
 
-  const filteredOrders = useMemo(() => purchaseOrders.filter(order => {
-    const orderNumber = order.order_number || "";
-    const supplierName = order.supplier || "";
-    const searchMatch = orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       supplierName.toLowerCase().includes(searchTerm.toLowerCase());
-    const statusMatch = statusFilter === "all" || order.status === statusFilter;
-    return searchMatch && statusMatch;
-  }), [purchaseOrders, searchTerm, statusFilter]);
+  const normalizedOrders = useMemo(() => (
+    purchaseOrders.map((order) => ({
+      ...order,
+      status: normalizePurchaseStatus(order.status),
+    }))
+  ), [purchaseOrders]);
+
+  const filteredOrders = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+
+    const filtered = normalizedOrders.filter((order) => {
+      const orderNumber = order.order_number || "";
+      const supplierName = order.supplier || "";
+      const searchMatch = orderNumber.toLowerCase().includes(searchLower) ||
+        supplierName.toLowerCase().includes(searchLower);
+      const statusMatch = statusFilter === "all" || order.status === statusFilter;
+
+      const supplierMatch = supplierFilter === "all" || (
+        (order.supplier_id && String(order.supplier_id) === supplierFilter) ||
+        (supplierName && suppliers.find((supplier) => String(supplier.id) === supplierFilter)?.name === supplierName)
+      );
+
+      const sparePartMatch = sparePartFilter === "all" || (
+        order.spare_part_id && String(order.spare_part_id) === sparePartFilter
+      );
+
+      return searchMatch && statusMatch && supplierMatch && sparePartMatch;
+    });
+
+    return [...filtered].sort((a, b) => {
+      const costDiff = Number(b.total_cost ?? 0) - Number(a.total_cost ?? 0);
+      if (costDiff !== 0) return costDiff;
+      return Number(b.items_count ?? 0) - Number(a.items_count ?? 0);
+    });
+  }, [
+    normalizedOrders,
+    searchTerm,
+    statusFilter,
+    supplierFilter,
+    sparePartFilter,
+    suppliers,
+  ]);
 
   const sparePartMap = useMemo(() => {
     return new Map(spareParts.map((part) => [part.id, part]));
@@ -118,7 +145,7 @@ export default function Purchases() {
       supplier_id: "",
       product_name: "",
       spare_part_id: "",
-      status: "draft",
+      status: "pending",
       priority: "media",
       total_cost: 0,
       items_count: 1,
@@ -143,7 +170,7 @@ export default function Purchases() {
         supplier_id: order.supplier_id ? String(order.supplier_id) : "",
         product_name: order.product_name || "",
         spare_part_id: order.spare_part_id ? String(order.spare_part_id) : "",
-        status: order.status || "draft",
+        status: normalizePurchaseStatus(order.status),
         priority: order.priority || "media",
         total_cost: Number(order.total_cost ?? 0),
         items_count: Number(order.items_count ?? 0),
@@ -215,6 +242,16 @@ export default function Purchases() {
     } catch (error) {
       console.error("Error deleting purchase order:", error);
       toast.error("No se pudo eliminar la orden.");
+    }
+  };
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await PurchaseOrder.update(Number(orderId), { status: newStatus });
+      loadPurchaseOrders();
+    } catch (error) {
+      console.error("Error updating purchase order status:", error);
+      toast.error("No se pudo actualizar el estado.");
     }
   };
 
@@ -326,137 +363,74 @@ export default function Purchases() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                placeholder="Buscar por número de orden o proveedor..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-11 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+        <div className="space-y-4 mb-8">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  placeholder="Buscar por número de orden o proveedor..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-11 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
+            <div className="flex items-center gap-3">
+              <Filter className="w-5 h-5 text-gray-500" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48 h-11 border-gray-300 rounded-xl">
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    <SelectItem value="pending">Pendiente</SelectItem>
+                    <SelectItem value="sent">Enviada</SelectItem>
+                    <SelectItem value="received">Recibida</SelectItem>
+                    <SelectItem value="closed">Cerrada</SelectItem>
+                    <SelectItem value="cancelled">Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Filter className="w-5 h-5 text-gray-500" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48 h-11 border-gray-300 rounded-xl">
-                <SelectValue placeholder="Filtrar por estado" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+              <SelectTrigger className="h-11 border-gray-300 rounded-xl">
+                <SelectValue placeholder="Proveedor" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="draft">Borrador</SelectItem>
-                <SelectItem value="pending">Pendiente</SelectItem>
-                <SelectItem value="sent">Enviada</SelectItem>
-                <SelectItem value="partial">Parcial</SelectItem>
-                <SelectItem value="received">Recibida</SelectItem>
-                <SelectItem value="closed">Cerrada</SelectItem>
+                <SelectItem value="all">Todos los proveedores</SelectItem>
+                {suppliers.map((supplier) => (
+                  <SelectItem key={supplier.id} value={String(supplier.id)}>
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sparePartFilter} onValueChange={setSparePartFilter}>
+              <SelectTrigger className="h-11 border-gray-300 rounded-xl">
+                <SelectValue placeholder="Repuesto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los repuestos</SelectItem>
+                {spareParts.map((part) => (
+                  <SelectItem key={part.id} value={String(part.id)}>
+                    {part.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Purchase Orders Grid */}
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            visible: {
-              transition: {
-                staggerChildren: 0.1
-              }
-            }
-          }}
-        >
-          {filteredOrders.map((order) => {
-            const statusConfig = getStatusConfig(order.status);
-            const StatusIcon = statusConfig.icon;
-
-            return (
-              <motion.div
-                key={order.id}
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 }
-                }}
-                whileHover={{ y: -2, scale: 1.02 }}
-                className="cursor-pointer"
-              >
-                <Card className="h-full bg-white border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 rounded-2xl">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-gray-900">
-                          {order.order_number}
-                        </CardTitle>
-                        <p className="text-sm text-gray-600 mt-1">{order.supplier || "Sin proveedor"}</p>
-                      </div>
-                      <Badge className={`${statusConfig.color} border-0`}>
-                        <StatusIcon className="w-3 h-3 mr-1" />
-                        {statusConfig.label}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                        <span className="text-gray-500">Costo</span>
-                        <p className="font-semibold text-gray-900">
-                          ${Number(order.total_cost ?? 0).toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                          <span className="text-gray-500">Cantidad</span>
-                          <p className="font-semibold text-gray-900">
-                            {order.items_count} items
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-gray-500">Producto</span>
-                          <p className="font-medium text-gray-800">
-                            {order.product_name || 'N/A'}
-                          </p>
-                        </div>
-                        {order.spare_part_id && (
-                          <div className="col-span-2">
-                            <span className="text-gray-500">Repuesto</span>
-                            <p className="font-medium text-gray-800">
-                              {sparePartMap.get(order.spare_part_id)?.name || `#${order.spare_part_id}`}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          Creada: {new Date(order.created_at || order.created_date).toLocaleDateString()}
-                        </span>
-                        {order.priority === 'alta' && (
-                          <Badge variant="outline" className="border-red-300 text-red-700 text-xs">
-                            Alta Prioridad
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openForm(order)}>
-                          <Edit className="w-3 h-3 mr-1" />
-                          Editar
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(order.id)}>
-                          <Trash2 className="w-3 h-3 mr-1" />
-                          Eliminar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+        <PurchaseOrdersKanban
+          orders={filteredOrders}
+          sparePartMap={sparePartMap}
+          isLoading={isLoading}
+          onEdit={openForm}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+        />
 
         {/* Empty State */}
         {filteredOrders.length === 0 && (
@@ -466,7 +440,7 @@ export default function Purchases() {
               No se encontraron órdenes de compra
             </h3>
             <p className="text-gray-500 mb-8">
-              {searchTerm || statusFilter !== "all" 
+              {searchTerm || statusFilter !== "all" || supplierFilter !== "all" || sparePartFilter !== "all"
                 ? "Intenta ajustar los filtros de búsqueda"
                 : "Crea tu primera orden de compra para comenzar"
               }
@@ -618,12 +592,11 @@ export default function Purchases() {
                     <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="draft">Borrador</SelectItem>
                         <SelectItem value="pending">Pendiente</SelectItem>
                         <SelectItem value="sent">Enviada</SelectItem>
-                        <SelectItem value="partial">Parcial</SelectItem>
                         <SelectItem value="received">Recibida</SelectItem>
                         <SelectItem value="closed">Cerrada</SelectItem>
+                        <SelectItem value="cancelled">Cancelada</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

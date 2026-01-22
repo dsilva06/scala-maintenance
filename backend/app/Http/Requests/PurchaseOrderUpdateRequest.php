@@ -25,7 +25,7 @@ class PurchaseOrderUpdateRequest extends FormRequest
                 'max:120',
                 $this->uniqueForUserCompany('purchase_orders', 'order_number', $purchaseOrder?->id),
             ],
-            'product_name' => ['sometimes', 'string', 'max:150'],
+            'product_name' => ['sometimes', 'nullable', 'string', 'max:150'],
             'supplier' => ['sometimes', 'nullable', 'string', 'max:150'],
             'supplier_id' => [
                 'sometimes',
@@ -37,7 +37,7 @@ class PurchaseOrderUpdateRequest extends FormRequest
             'priority' => ['sometimes', 'string', 'max:50'],
             'total_cost' => ['sometimes', 'numeric', 'min:0'],
             'items_count' => ['sometimes', 'integer', 'min:0'],
-            'expected_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:today'],
+            'expected_date' => ['sometimes', 'nullable', 'date'],
             'spare_part_id' => [
                 'sometimes',
                 'nullable',

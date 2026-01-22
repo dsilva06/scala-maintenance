@@ -20,6 +20,8 @@ class CreateMaintenanceOrder
         $this->sideEffects->ensureVehicleBelongsToUser($data['vehicle_id'] ?? null, $user->company_id);
 
         $payload = $this->normalizer->handle($data);
+        $partsPayload = $payload['parts'] ?? null;
+        unset($payload['parts']);
         $payload['company_id'] = $user->company_id;
 
         $order = $user->maintenanceOrders()->create($payload);
@@ -30,6 +32,8 @@ class CreateMaintenanceOrder
         }
 
         $this->sideEffects->refreshInspectionStatus($order);
+        $this->sideEffects->syncPartsUsed($order, $partsPayload);
+        $this->sideEffects->applySparePartUsage($order);
 
         $this->auditLogger->record(
             $user,

@@ -79,12 +79,12 @@ const navigationItems = [
     icon: ClipboardCheck,
     roles: ADMIN_EMPLOYEE,
   },
-  {
-    title: "Asistente AI",
-    url: "/app/ai",
-    icon: Bot,
-    roles: ADMIN_EMPLOYEE,
-  },
+  // {
+  //   title: "Asistente AI",
+  //   url: "/app/ai",
+  //   icon: Bot,
+  //   roles: ADMIN_EMPLOYEE,
+  // },
   {
     title: "Documentos",
     url: "/app/documents",

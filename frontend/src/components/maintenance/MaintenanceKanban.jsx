@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { GripVertical, Edit, Car, User, Calendar, Gauge } from 'lucide-react';
+import { GripVertical, Edit, Car, User, Calendar, Gauge, ClipboardCheck, BookOpen, Wrench } from 'lucide-react';
 import { format } from 'date-fns';
 
 const columns = [
@@ -28,12 +28,40 @@ const columnColors = {
 };
 
 
-const OrderCard = ({ order, vehicle, onEdit, index }) => {
+const OrderCard = ({ order, vehicle, onEdit, onSelect, index }) => {
   const draggableId = order.id?.toString() ?? `order-${index}`;
   const tasks = Array.isArray(order.tasks) ? order.tasks : [];
   const taskDescriptions = tasks
     .map((task) => task?.description || task?.fault || task?.task || "")
     .filter(Boolean);
+  const displayTitle = order.title || order.description || 'Orden de mantenimiento';
+  const metadata = order.metadata || {};
+  const origin = metadata.source
+    ? metadata.source
+    : metadata.inspection_id
+    ? 'inspection'
+    : metadata.guide_id
+    ? 'guide'
+    : 'manual';
+  const originConfig = {
+    inspection: {
+      label: 'Inspeccion',
+      className: 'bg-gradient-to-r from-amber-50 to-rose-50 text-amber-700 border-amber-200',
+      icon: ClipboardCheck,
+    },
+    guide: {
+      label: 'Guia',
+      className: 'bg-gradient-to-r from-sky-50 to-indigo-50 text-sky-700 border-sky-200',
+      icon: BookOpen,
+    },
+    manual: {
+      label: 'Directa',
+      className: 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border-emerald-200',
+      icon: Wrench,
+    },
+  };
+  const originInfo = originConfig[origin] ?? originConfig.manual;
+  const OriginIcon = originInfo.icon;
   return (
     <Draggable draggableId={draggableId} index={index}>
       {(provided, snapshot) => (
@@ -42,12 +70,23 @@ const OrderCard = ({ order, vehicle, onEdit, index }) => {
           {...provided.draggableProps}
           className="mb-3"
         >
-          <Card className={`bg-white hover:shadow-md transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''}`}>
+          <Card
+            className={`bg-white hover:shadow-md transition-shadow duration-200 cursor-pointer ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''}`}
+            onClick={() => onSelect?.(order)}
+          >
             <CardContent className="p-3">
               <div className="flex justify-between items-start">
                 <Badge variant="outline" className={`text-xs ${priorityColors[order.priority]}`}>{order.priority}</Badge>
                 <div className="flex items-center">
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="h-6 w-6 p-0 mr-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onEdit(order);
+                    }}
+                    className="h-6 w-6 p-0 mr-1"
+                  >
                     <Edit className="h-3 w-3" />
                   </Button>
                   <div {...provided.dragHandleProps} className="cursor-grab p-1">
@@ -55,21 +94,26 @@ const OrderCard = ({ order, vehicle, onEdit, index }) => {
                   </div>
                 </div>
               </div>
-              {taskDescriptions.length > 0 ? (
-                <div className="space-y-1.5 my-2">
+              <p className="font-semibold text-sm my-2 text-gray-800">{displayTitle}</p>
+              {taskDescriptions.length > 0 && order.title && (
+                <div className="space-y-1 text-xs text-gray-500">
                   {taskDescriptions.slice(0, 2).map((task, idx) => (
-                    <p key={`${task}-${idx}`} className="text-sm font-semibold text-gray-800">
-                      {task}
-                    </p>
+                    <p key={`${task}-${idx}`}>{task}</p>
                   ))}
                   {taskDescriptions.length > 2 && (
-                    <p className="text-xs text-gray-500">+{taskDescriptions.length - 2} trabajos más</p>
+                    <p>+{taskDescriptions.length - 2} trabajos más</p>
                   )}
                 </div>
-              ) : (
-                <p className="font-semibold text-sm my-2 text-gray-800">{order.description}</p>
               )}
               <div className="space-y-1.5 text-xs text-gray-600">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${originInfo.className}`}
+                  >
+                    <OriginIcon className="h-3 w-3" />
+                    {originInfo.label}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2">
                   <Car className="w-3 h-3" />
                   <span>{vehicle?.plate || 'Vehículo no encontrado'}</span>
@@ -106,7 +150,7 @@ const OrderCard = ({ order, vehicle, onEdit, index }) => {
 };
 
 
-export default function MaintenanceKanban({ orders, vehicles, isLoading, onEdit, onStatusChange }) {
+export default function MaintenanceKanban({ orders, vehicles, isLoading, onEdit, onStatusChange, onSelect }) {
   
   const onDragEnd = (result) => {
     const { source, destination, draggableId } = result;
@@ -148,6 +192,7 @@ export default function MaintenanceKanban({ orders, vehicles, isLoading, onEdit,
                         order={order}
                         vehicle={vehicles.find(v => v.id === order.vehicle_id)}
                         onEdit={onEdit}
+                        onSelect={onSelect}
                         index={index}
                       />
                     ))}

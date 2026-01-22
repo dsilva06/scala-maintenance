@@ -23,6 +23,8 @@ class UpdateMaintenanceOrder
 
         $before = $this->auditLogger->snapshot($order);
         $payload = $this->normalizer->handle($data);
+        $partsPayload = $payload['parts'] ?? null;
+        unset($payload['parts']);
         unset($payload['company_id'], $payload['user_id']);
 
         $order->update($payload);
@@ -33,6 +35,8 @@ class UpdateMaintenanceOrder
         }
 
         $this->sideEffects->refreshInspectionStatus($order);
+        $this->sideEffects->syncPartsUsed($order, $partsPayload);
+        $this->sideEffects->applySparePartUsage($order);
 
         $this->auditLogger->record(
             $user,

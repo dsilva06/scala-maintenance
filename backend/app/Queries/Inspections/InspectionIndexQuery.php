@@ -16,7 +16,13 @@ class InspectionIndexQuery
 
     public function handle(Request $request, User $user): Builder
     {
-        $query = CompanyScope::apply(Inspection::query()->with('vehicle'), $user);
+        $summary = $request->boolean('summary');
+        $baseQuery = Inspection::query();
+        if (!$summary) {
+            $baseQuery->with('vehicle');
+        }
+
+        $query = CompanyScope::apply($baseQuery, $user);
 
         if ($vehicleId = $request->query('vehicle_id')) {
             $query->where('vehicle_id', $vehicleId);
@@ -40,6 +46,20 @@ class InspectionIndexQuery
             'inspector',
             'overall_status',
         ]);
+
+        if ($summary) {
+            $query->select([
+                'id',
+                'user_id',
+                'company_id',
+                'vehicle_id',
+                'inspection_date',
+                'overall_status',
+                'inspector',
+                'mileage',
+                'created_at',
+            ]);
+        }
 
         return $query;
     }

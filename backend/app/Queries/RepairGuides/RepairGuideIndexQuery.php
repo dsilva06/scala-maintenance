@@ -25,6 +25,10 @@ class RepairGuideIndexQuery
             $query->where('type', $type);
         }
 
+        if ($vehicleId = $request->query('vehicle_id')) {
+            $query->where('vehicle_id', $vehicleId);
+        }
+
         $this->applyQueryOptions($request, $query, [
             'created_at',
             'updated_at',

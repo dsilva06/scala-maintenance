@@ -35,15 +35,16 @@ return [
         ],
     ],
 
-    'ai_agent' => [
-        'provider' => env('AI_AGENT_PROVIDER', 'openai'),
-        'api_key' => env('AI_AGENT_API_KEY'),
-        'base_url' => env('AI_AGENT_BASE_URL', 'https://api.openai.com/v1'),
-        'model' => env('AI_AGENT_MODEL', 'gpt-4.1-mini'),
-        'timeout' => env('AI_AGENT_TIMEOUT', 60),
-        'use_tools' => env('AI_AGENT_USE_TOOLS', true),
-        'memory_limit' => env('AI_AGENT_MEMORY_LIMIT', 8),
-        'operational_memory_limit' => env('AI_AGENT_OPERATIONAL_MEMORY_LIMIT', 6),
-    ],
+    // AI agent disabled for this release.
+    // 'ai_agent' => [
+    //     'provider' => env('AI_AGENT_PROVIDER', 'openai'),
+    //     'api_key' => env('AI_AGENT_API_KEY'),
+    //     'base_url' => env('AI_AGENT_BASE_URL', 'https://api.openai.com/v1'),
+    //     'model' => env('AI_AGENT_MODEL', 'gpt-4.1-mini'),
+    //     'timeout' => env('AI_AGENT_TIMEOUT', 60),
+    //     'use_tools' => env('AI_AGENT_USE_TOOLS', true),
+    //     'memory_limit' => env('AI_AGENT_MEMORY_LIMIT', 8),
+    //     'operational_memory_limit' => env('AI_AGENT_OPERATIONAL_MEMORY_LIMIT', 6),
+    // ],
 
 ];

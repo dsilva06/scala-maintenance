@@ -35,14 +35,14 @@ class MaintenanceOrderController extends Controller
         $this->authorizeCompanyWrite($request);
         $order = $createMaintenanceOrder->handle($request->user(), $request->validated());
 
-        return MaintenanceOrderResource::make($order->load('vehicle'))->response()->setStatusCode(201);
+        return MaintenanceOrderResource::make($order->load(['vehicle', 'partsUsed']))->response()->setStatusCode(201);
     }
 
     public function show(Request $request, MaintenanceOrder $maintenanceOrder)
     {
         $this->authorizeCompanyRead($request, $maintenanceOrder);
 
-        return MaintenanceOrderResource::make($maintenanceOrder->load('vehicle'));
+        return MaintenanceOrderResource::make($maintenanceOrder->load(['vehicle', 'partsUsed']));
     }
 
     public function update(
@@ -60,7 +60,7 @@ class MaintenanceOrderController extends Controller
             $request->validated()
         );
 
-        return MaintenanceOrderResource::make($maintenanceOrder->load('vehicle'));
+        return MaintenanceOrderResource::make($maintenanceOrder->load(['vehicle', 'partsUsed']));
     }
 
     public function destroy(

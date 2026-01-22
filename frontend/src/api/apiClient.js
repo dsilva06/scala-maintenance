@@ -188,6 +188,62 @@ function createSparePartClient() {
   };
 }
 
+function createDocumentClient() {
+  const sortMap = {
+    created_date: 'created_at',
+    updated_date: 'updated_at',
+    expiration_date: 'expiration_date',
+    document_type: 'document_type',
+  };
+
+  const list = async (sortOrParams, limit) => {
+    const params =
+      typeof sortOrParams === 'object' && sortOrParams !== null
+        ? { ...sortOrParams }
+        : {
+            sort: sortOrParams,
+            ...(limit ? { limit } : {}),
+          };
+
+    if (params.sort) {
+      params.sort = normalizeSort(params.sort, sortMap);
+    }
+
+    const query = buildQuery(params);
+    const response = await httpClient.get(`${apiPath('documents')}${query ? `?${query}` : ''}`);
+    return response?.data ?? [];
+  };
+
+  const get = async (id) => {
+    const response = await httpClient.get(apiPath(`documents/${id}`));
+    return response?.data ?? response;
+  };
+
+  const create = async (payload) => {
+    const response = await httpClient.post(apiPath('documents'), payload);
+    return response?.data ?? response;
+  };
+
+  const update = async (id, payload) => {
+    const response = await httpClient.patch(apiPath(`documents/${id}`), payload);
+    return response?.data ?? response;
+  };
+
+  const destroy = async (id) => {
+    await httpClient.delete(apiPath(`documents/${id}`));
+    return null;
+  };
+
+  return {
+    list,
+    filter: (params = {}) => list(params),
+    get,
+    create,
+    update,
+    delete: destroy,
+  };
+}
+
 function createPurchaseOrderClient() {
   const sortMap = {
     created_date: 'created_at',
@@ -300,6 +356,62 @@ function createTripClient() {
   };
 }
 
+function createRepairGuideClient() {
+  const sortMap = {
+    created_date: 'created_at',
+    updated_date: 'updated_at',
+    name: 'name',
+    priority: 'priority',
+  };
+
+  const list = async (sortOrParams, limit) => {
+    const params =
+      typeof sortOrParams === 'object' && sortOrParams !== null
+        ? { ...sortOrParams }
+        : {
+            sort: sortOrParams,
+            ...(limit ? { limit } : {}),
+          };
+
+    if (params.sort) {
+      params.sort = normalizeSort(params.sort, sortMap);
+    }
+
+    const query = buildQuery(params);
+    const response = await httpClient.get(`${apiPath('repair-guides')}${query ? `?${query}` : ''}`);
+    return response?.data ?? [];
+  };
+
+  const get = async (id) => {
+    const response = await httpClient.get(apiPath(`repair-guides/${id}`));
+    return response?.data ?? response;
+  };
+
+  const create = async (payload) => {
+    const response = await httpClient.post(apiPath('repair-guides'), payload);
+    return response?.data ?? response;
+  };
+
+  const update = async (id, payload) => {
+    const response = await httpClient.patch(apiPath(`repair-guides/${id}`), payload);
+    return response?.data ?? response;
+  };
+
+  const destroy = async (id) => {
+    await httpClient.delete(apiPath(`repair-guides/${id}`));
+    return null;
+  };
+
+  return {
+    list,
+    filter: (params = {}) => list(params),
+    get,
+    create,
+    update,
+    delete: destroy,
+  };
+}
+
 function createSupplierClient() {
   const sortMap = {
     created_date: 'created_at',
@@ -381,8 +493,8 @@ export const apiClient = {
     SparePart: createSparePartClient(),
     PurchaseOrder: createPurchaseOrderClient(),
     Supplier: createSupplierClient(),
-    Document: createPlaceholderEntity('Document'),
-    RepairGuide: createPlaceholderEntity('RepairGuide'),
+    Document: createDocumentClient(),
+    RepairGuide: createRepairGuideClient(),
     Trip: createTripClient(),
     Alert: createPlaceholderEntity('Alert'),
     Driver: createPlaceholderEntity('Driver'),

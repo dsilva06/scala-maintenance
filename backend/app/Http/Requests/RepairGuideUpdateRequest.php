@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AppliesUserCompanyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RepairGuideUpdateRequest extends FormRequest
 {
+    use AppliesUserCompanyRules;
+
     public function authorize(): bool
     {
         return true;
@@ -14,6 +17,12 @@ class RepairGuideUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'vehicle_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                $this->existsForUserCompany('vehicles', 'id'),
+            ],
             'name' => ['sometimes', 'string', 'max:150'],
             'description' => ['sometimes', 'string', 'max:255'],
             'category' => ['sometimes', 'nullable', 'string', 'max:100'],
@@ -26,7 +35,7 @@ class RepairGuideUpdateRequest extends FormRequest
             'steps.*.title' => ['nullable', 'string', 'max:150'],
             'steps.*.description' => ['nullable', 'string'],
             'required_parts' => ['sometimes', 'nullable', 'array'],
-            'required_parts.*.part_id' => ['nullable', 'string'],
+            'required_parts.*.part_id' => ['nullable', 'integer'],
             'required_parts.*.quantity_needed' => ['nullable', 'integer', 'min:1'],
             'required_parts.*.is_critical' => ['nullable', 'boolean'],
             'keywords' => ['sometimes', 'nullable', 'array'],

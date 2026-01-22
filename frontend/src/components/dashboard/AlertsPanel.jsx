@@ -8,10 +8,11 @@ import {
   FileText,
   Package,
   Settings,
-  ChevronRight,
-  Calendar
+  ChevronRight
 } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function AlertsPanel({ alerts }) {
   const documentLabels = {
@@ -33,18 +34,18 @@ export default function AlertsPanel({ alerts }) {
 
   if (!alerts) {
     return (
-       <Card className="shadow-sm">
+      <Card className="shadow-sm border-slate-200">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <AlertTriangle className="w-5 h-5 text-gray-500" />
             Alertas Críticas
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-gray-500 py-8">Cargando alertas...</p>
+          <p className="text-center text-gray-500 py-8 text-sm">Cargando alertas...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   const { expiringSoon, lowStock, criticalOrders } = alerts;
@@ -52,19 +53,19 @@ export default function AlertsPanel({ alerts }) {
 
   if (totalAlerts === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="shadow-sm border-slate-200">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-green-600" />
+          <CardTitle className="flex items-center gap-2 text-lg text-emerald-700">
+            <AlertTriangle className="w-5 h-5 text-emerald-600" />
             Alertas del Sistema
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-green-600" />
+            <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-7 h-7 text-emerald-600" />
             </div>
-            <p className="text-gray-600 font-medium mb-2">Todo en orden</p>
+            <p className="text-gray-700 font-semibold mb-2 text-base">Todo en orden</p>
             <p className="text-sm text-gray-500">No hay alertas críticas en este momento</p>
           </div>
         </CardContent>
@@ -73,37 +74,46 @@ export default function AlertsPanel({ alerts }) {
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className="shadow-sm border-slate-200">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg text-red-700">
           <AlertTriangle className="w-5 h-5 text-red-600" />
           Alertas Críticas
-          <Badge variant="destructive" className="ml-2">
+          <Badge variant="destructive" className="ml-2 text-sm">
             {totalAlerts}
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         {/* Documentos por vencer */}
         {expiringSoon.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <FileText className="w-4 h-4" />
-              Documentos por Vencer
+            <div className="flex items-center justify-between gap-2 text-sm font-semibold text-gray-700">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Documentos por Vencer
+              </div>
+              <Link to={createPageUrl("Documents")} className="text-xs text-blue-600 hover:underline">
+                Ver documentos
+              </Link>
             </div>
             <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
               {expiringSoon.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <Link
+                  key={doc.id}
+                  to={createPageUrl("Documents")}
+                  className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors"
+                >
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-semibold text-gray-900">
                       {formatDocumentType(doc.document_type)}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-600">
                       Vence: {format(new Date(doc.expiration_date), 'dd/MM/yyyy')}
                     </p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -112,21 +122,30 @@ export default function AlertsPanel({ alerts }) {
         {/* Stock bajo */}
         {lowStock.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Package className="w-4 h-4" />
-              Stock Bajo
+            <div className="flex items-center justify-between gap-2 text-sm font-semibold text-gray-700">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Stock Bajo
+              </div>
+              <Link to={createPageUrl("Inventory")} className="text-xs text-blue-600 hover:underline">
+                Ver inventario
+              </Link>
             </div>
              <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
               {lowStock.map((part) => (
-                <div key={part.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                <Link
+                  key={part.id}
+                  to={createPageUrl("Inventory")}
+                  className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
+                >
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{part.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-semibold text-gray-900">{part.name}</p>
+                    <p className="text-sm text-gray-600">
                       Stock: {part.current_stock} (Min: {part.minimum_stock})
                     </p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -135,30 +154,39 @@ export default function AlertsPanel({ alerts }) {
         {/* Mantenimientos críticos */}
         {criticalOrders.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Settings className="w-4 h-4" />
-              Mantenimientos Críticos
+            <div className="flex items-center justify-between gap-2 text-sm font-semibold text-gray-700">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Mantenimientos Críticos
+              </div>
+              <Link to={createPageUrl("Maintenance")} className="text-xs text-blue-600 hover:underline">
+                Ver mantenimiento
+              </Link>
             </div>
              <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
               {criticalOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                <Link
+                  key={order.id}
+                  to={`${createPageUrl("Maintenance")}?order=${order.id}`}
+                  className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
+                >
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {order.description}
+                    <p className="text-sm font-semibold text-gray-900">
+                      {order.title || order.description}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-600">
                       Orden: {order.order_number}
                     </p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
+                </Link>
               ))}
             </div>
           </div>
         )}
 
-        <Button variant="outline" className="w-full mt-4">
-          Ver Todas las Alertas
+        <Button asChild variant="outline" className="w-full mt-4 text-sm font-semibold">
+          <Link to={createPageUrl("Maintenance")}>Ver mantenimiento</Link>
         </Button>
       </CardContent>
     </Card>

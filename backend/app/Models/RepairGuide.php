@@ -13,6 +13,7 @@ class RepairGuide extends Model
     protected $fillable = [
         'user_id',
         'company_id',
+        'vehicle_id',
         'name',
         'description',
         'category',
@@ -42,5 +43,10 @@ class RepairGuide extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class);
     }
 }

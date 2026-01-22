@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { listMaintenanceOrders, createMaintenanceOrder, updateMaintenanceOrder } from "@/api/maintenanceOrders";
+import { listSpareParts } from "@/api/spareParts";
 import { listVehicles } from "@/api/vehicles";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -8,13 +9,17 @@ import { toast } from "sonner";
 
 import MaintenanceKanban from "../components/maintenance/MaintenanceKanban";
 import MaintenanceOrderForm from "../components/maintenance/MaintenanceOrderForm";
+import MaintenanceOrderDetailDialog from "../components/maintenance/MaintenanceOrderDetailDialog";
 
 export default function Maintenance() {
   const [orders, setOrders] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [spareParts, setSpareParts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [monthFilter, setMonthFilter] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -27,12 +32,14 @@ export default function Maintenance() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [ordersData, vehiclesData] = await Promise.all([
+      const [ordersData, vehiclesData, partsData] = await Promise.all([
         listMaintenanceOrders({ sort: '-created_at', limit: 200, month: monthFilter }),
-        listVehicles({ sort: 'plate', limit: 500 })
+        listVehicles({ sort: 'plate', limit: 500 }),
+        listSpareParts({ sort: 'name', limit: 1000 })
       ]);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
       setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
+      setSpareParts(Array.isArray(partsData) ? partsData : []);
     } catch (error) {
       console.error("Error loading maintenance data:", error);
       toast.error("Error al cargar los datos de mantenimiento.");
@@ -63,6 +70,18 @@ export default function Maintenance() {
   const handleEdit = (order) => {
     setEditingOrder(order);
     setShowForm(true);
+  };
+
+  const handleOpenDetail = (order) => {
+    setSelectedOrder(order);
+    setIsDetailOpen(true);
+  };
+
+  const handleDetailOpenChange = (nextOpen) => {
+    setIsDetailOpen(nextOpen);
+    if (!nextOpen) {
+      setSelectedOrder(null);
+    }
   };
   
   const handleStatusChange = async (orderId, newStatus) => {
@@ -115,12 +134,14 @@ export default function Maintenance() {
           isLoading={isLoading}
           onEdit={handleEdit}
           onStatusChange={handleStatusChange}
+          onSelect={handleOpenDetail}
         />
 
         {showForm && (
           <MaintenanceOrderForm
             order={editingOrder}
             vehicles={vehicles}
+            spareParts={spareParts}
             onSubmit={handleFormSubmit}
             onCancel={() => {
               setShowForm(false);
@@ -130,6 +151,13 @@ export default function Maintenance() {
             existingOrders={orders}
           />
         )}
+
+        <MaintenanceOrderDetailDialog
+          order={selectedOrder}
+          vehicle={vehicles.find((v) => v.id === selectedOrder?.vehicle_id)}
+          open={isDetailOpen}
+          onOpenChange={handleDetailOpenChange}
+        />
       </div>
     </div>
   );

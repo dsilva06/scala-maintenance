@@ -98,15 +98,15 @@ export default function AIInsights({ vehicles, maintenanceOrders, spareParts }) 
   return (
     <div className="space-y-4">
       {insights.map((insight, index) => (
-        <Card key={index} className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 rounded-full">
-                <insight.icon className="w-4 h-4 text-indigo-600" />
+        <Card key={index} className="bg-white border-indigo-200 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 bg-indigo-100 rounded-full">
+                <insight.icon className="w-5 h-5 text-indigo-600" />
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium text-gray-900 text-sm">{insight.title}</h4>
+                <div className="flex items-center gap-3 mb-2">
+                  <h4 className="font-semibold text-gray-900 text-base">{insight.title}</h4>
                   <Badge 
                     variant="outline" 
                     className={`text-xs ${getPriorityColor(insight.priority)}`}
@@ -114,9 +114,9 @@ export default function AIInsights({ vehicles, maintenanceOrders, spareParts }) 
                     {insight.priority}
                   </Badge>
                 </div>
-                <p className="text-xs text-gray-600 mb-2">{insight.description}</p>
-                <p className="text-xs text-indigo-600 font-medium">
-                  💡 {insight.action}
+                <p className="text-sm text-gray-700 mb-2">{insight.description}</p>
+                <p className="text-sm text-indigo-600 font-semibold">
+                  {insight.action}
                 </p>
               </div>
             </div>
@@ -125,8 +125,8 @@ export default function AIInsights({ vehicles, maintenanceOrders, spareParts }) 
       ))}
       
       <div className="text-center pt-2">
-        <p className="text-xs text-gray-500">
-          <Activity className="w-3 h-3 inline mr-1" />
+        <p className="text-sm text-gray-500">
+          <Activity className="w-4 h-4 inline mr-1" />
           Insights generados por FLOTA AI
         </p>
       </div>

@@ -51,8 +51,8 @@ export default function Inspections() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [inspectionsData, vehiclesData] = await Promise.all([
-        Inspection.list({ sort: '-inspection_date', month: monthFilter }),
+      const [inspectionsResult, vehiclesResult] = await Promise.allSettled([
+        Inspection.list({ sort: '-inspection_date', month: monthFilter, limit: 200, summary: true }),
         Vehicle.list()
       ]);
 
@@ -64,17 +64,40 @@ export default function Inspections() {
         return status || 'ok';
       };
 
-      const normalizedInspections = inspectionsData.map((insp) => ({
-        ...insp,
-        overall_status: normalizeStatus(insp.overall_status),
-      }));
+      if (inspectionsResult.status === 'fulfilled') {
+        const inspectionsData = Array.isArray(inspectionsResult.value) ? inspectionsResult.value : [];
+        const normalizedInspections = inspectionsData.map((insp) => ({
+          ...insp,
+          overall_status: normalizeStatus(insp.overall_status),
+        }));
+        setInspections(normalizedInspections);
+      } else {
+        console.error("Error loading inspections data:", inspectionsResult.reason);
+      }
 
-      setInspections(normalizedInspections);
-      setVehicles(vehiclesData);
+      if (vehiclesResult.status === 'fulfilled') {
+        setVehicles(Array.isArray(vehiclesResult.value) ? vehiclesResult.value : []);
+      } else {
+        console.error("Error loading vehicles data:", vehiclesResult.reason);
+      }
     } catch (error) {
       console.error("Error loading inspections data:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadInspectionDetails = async (inspection) => {
+    if (!inspection || Array.isArray(inspection.checklist_items)) {
+      return inspection;
+    }
+
+    try {
+      const fullInspection = await Inspection.get(inspection.id);
+      return fullInspection || inspection;
+    } catch (error) {
+      console.error("Error loading inspection details:", error);
+      return inspection;
     }
   };
   
@@ -148,8 +171,9 @@ export default function Inspections() {
     }
   };
 
-  const handleEdit = (inspection) => {
-    setEditingInspection(inspection);
+  const handleEdit = async (inspection) => {
+    const fullInspection = await loadInspectionDetails(inspection);
+    setEditingInspection(fullInspection);
     setShowForm(true);
   };
 
@@ -167,8 +191,9 @@ export default function Inspections() {
     }
   };
 
-  const handleViewInspection = (inspection) => {
-    setSelectedInspection(inspection);
+  const handleViewInspection = async (inspection) => {
+    const fullInspection = await loadInspectionDetails(inspection);
+    setSelectedInspection(fullInspection);
   };
 
   if (isLoading) {

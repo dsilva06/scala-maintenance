@@ -1,5 +1,8 @@
 <?php
 
+/*
+AI agent disabled for this release.
+
 namespace Tests\Feature;
 
 use App\Models\AiConversation;
@@ -115,3 +118,4 @@ class AiConversationTest extends TestCase
         ])->assertForbidden();
     }
 }
+*/

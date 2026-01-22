@@ -23,7 +23,7 @@ class PurchaseOrderStoreRequest extends FormRequest
                 'max:120',
                 $this->uniqueForUserCompany('purchase_orders', 'order_number'),
             ],
-            'product_name' => ['required', 'string', 'max:150'],
+            'product_name' => ['nullable', 'string', 'max:150'],
             'supplier' => ['required_without:supplier_id', 'string', 'max:150'],
             'supplier_id' => [
                 'nullable',
@@ -34,7 +34,7 @@ class PurchaseOrderStoreRequest extends FormRequest
             'priority' => ['nullable', 'string', 'max:50'],
             'total_cost' => ['nullable', 'numeric', 'min:0'],
             'items_count' => ['nullable', 'integer', 'min:0'],
-            'expected_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'expected_date' => ['nullable', 'date'],
             'spare_part_id' => [
                 'nullable',
                 'integer',

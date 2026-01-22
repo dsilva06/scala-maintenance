@@ -28,35 +28,35 @@ export default function SmartFlowWidget() {
   };
 
   return (
-    <Card className="shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+    <Card className="shadow-sm border-slate-200">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
           <BookOpen className="w-5 h-5 text-blue-600" />
           Flujo Inteligente: Guías → Mantenimiento
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{mockFlowData.activeGuides}</div>
-            <div className="text-xs text-gray-600">Guías Activas</div>
+          <div className="text-center rounded-xl border border-slate-200 bg-white p-4">
+            <div className="text-3xl font-semibold text-blue-600">{mockFlowData.activeGuides}</div>
+            <div className="text-sm text-gray-600 mt-1">Guías Activas</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{mockFlowData.readyForMaintenance}</div>
-            <div className="text-xs text-gray-600">Listas para Orden</div>
+          <div className="text-center rounded-xl border border-slate-200 bg-white p-4">
+            <div className="text-3xl font-semibold text-emerald-600">{mockFlowData.readyForMaintenance}</div>
+            <div className="text-sm text-gray-600 mt-1">Listas para Orden</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{mockFlowData.pendingMaterials}</div>
-            <div className="text-xs text-gray-600">Materiales Pendientes</div>
+          <div className="text-center rounded-xl border border-slate-200 bg-white p-4">
+            <div className="text-3xl font-semibold text-orange-600">{mockFlowData.pendingMaterials}</div>
+            <div className="text-sm text-gray-600 mt-1">Materiales Pendientes</div>
           </div>
         </div>
 
         {/* Recent Activity */}
         <div className="space-y-2">
-          <h4 className="font-medium text-gray-900 text-sm">Actividad Reciente</h4>
+          <h4 className="font-semibold text-gray-900 text-base">Actividad Reciente</h4>
           {mockFlowData.recentActivity.map((activity, index) => (
-            <div key={index} className="flex items-center justify-between p-2 bg-white/60 rounded-lg">
+            <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
               <div className="flex items-center gap-2">
                 {activity.status === 'ready' ? (
                   <CheckCircle className="w-4 h-4 text-green-600" />
@@ -64,8 +64,8 @@ export default function SmartFlowWidget() {
                   <AlertTriangle className="w-4 h-4 text-orange-600" />
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                  <p className="text-xs text-gray-500">hace {activity.time}</p>
+                  <p className="text-sm font-semibold text-gray-900">{activity.title}</p>
+                  <p className="text-sm text-gray-500">hace {activity.time}</p>
                 </div>
               </div>
               <Badge 
@@ -80,13 +80,13 @@ export default function SmartFlowWidget() {
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
-          <Button asChild variant="outline" size="sm" className="flex-1">
+          <Button asChild variant="outline" size="sm" className="flex-1 font-semibold">
             <Link to={createPageUrl("MaintenanceGuides")}>
               <BookOpen className="w-4 h-4 mr-1" />
               Ver Guías
             </Link>
           </Button>
-          <Button asChild size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700">
+          <Button asChild size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700 font-semibold">
             <Link to={createPageUrl("Maintenance")}>
               <Settings className="w-4 h-4 mr-1" />
               Mantenimiento

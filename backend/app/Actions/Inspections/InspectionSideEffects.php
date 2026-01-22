@@ -8,6 +8,41 @@ use App\Models\Vehicle;
 
 class InspectionSideEffects
 {
+    private function buildMaintenanceTitle(Inspection $inspection): string
+    {
+        $items = $inspection->checklist_items ?? [];
+
+        if (!is_array($items) || count($items) === 0) {
+            return 'Mantenimiento por inspeccion';
+        }
+
+        $needsMaintenance = array_values(array_filter($items, function ($item) {
+            $status = $item['status'] ?? null;
+            return in_array($status, ['critico', 'observacion'], true);
+        }));
+
+        if (count($needsMaintenance) === 0) {
+            return 'Mantenimiento por inspeccion';
+        }
+
+        $primary = $needsMaintenance[0];
+        $itemName = trim((string) ($primary['item'] ?? ''));
+        $category = trim((string) ($primary['category'] ?? ''));
+
+        $title = $itemName !== '' ? $itemName : 'Mantenimiento por inspeccion';
+
+        if ($category !== '' && $itemName !== '') {
+            $title .= " ({$category})";
+        }
+
+        $extraCount = count($needsMaintenance) - 1;
+        if ($extraCount > 0) {
+            $title .= " (+{$extraCount})";
+        }
+
+        return $title;
+    }
+
     public function handle(Inspection $inspection): void
     {
         if ($inspection->vehicle_id) {
@@ -36,6 +71,8 @@ class InspectionSideEffects
             return;
         }
 
+        $title = $this->buildMaintenanceTitle($inspection);
+
         MaintenanceOrder::create([
             'user_id' => $inspection->user_id,
             'company_id' => $inspection->company_id,
@@ -44,11 +81,14 @@ class InspectionSideEffects
             'type' => 'correctivo',
             'priority' => 'critica',
             'status' => 'pendiente',
-            'description' => "Generado por inspección ({$inspection->overall_status})",
+            'title' => $title,
+            'description' => "Generado por inspeccion ({$inspection->overall_status})",
             'mechanic' => $inspection->inspector,
             'notes' => 'Orden creada automáticamente desde inspección.',
             'metadata' => [
+                'source' => 'inspection',
                 'inspection_id' => $inspection->id,
+                'inspection_status' => $inspection->overall_status,
             ],
         ]);
     }

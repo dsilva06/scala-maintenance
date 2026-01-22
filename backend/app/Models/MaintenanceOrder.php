@@ -57,4 +57,9 @@ class MaintenanceOrder extends Model
     {
         return $this->belongsTo(Vehicle::class);
     }
+
+    public function partsUsed()
+    {
+        return $this->hasMany(MaintenanceOrderPart::class);
+    }
 }

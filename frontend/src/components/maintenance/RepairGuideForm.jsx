@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Plus, Trash2, BookOpen, Package, ListChecks } from "lucide-react";
 import { listSpareParts } from "@/api/spareParts";
+import { Vehicle } from "@/api/entities";
 import { toast } from "sonner";
 
 const TYPES = ["preventivo", "correctivo"];
@@ -15,20 +16,38 @@ const CATEGORIES = ["motor", "frenos", "suspension", "transmision", "electrico",
 const DIFFICULTIES = ["basico", "intermedio", "avanzado"];
 const PRIORITIES = ["baja", "media", "alta", "critica"];
 
-export default function RepairGuideForm({ onSubmit, onCancel }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    type: "correctivo",
-    priority: "media", // Added priority field
-    difficulty: "intermedio",
-    estimated_time_hours: 1,
-    description: "",
-    steps: [{ step_number: 1, title: "", description: "" }],
-    required_parts: [],
-    keywords: [],
-  });
+const buildFormData = (guide) => ({
+  vehicle_id: guide?.vehicle_id ? String(guide.vehicle_id) : "",
+  name: guide?.name || "",
+  category: guide?.category || "",
+  type: guide?.type || "correctivo",
+  priority: guide?.priority || "media",
+  difficulty: guide?.difficulty || "intermedio",
+  estimated_time_hours: guide?.estimated_time_hours ?? 1,
+  description: guide?.description || "",
+  steps: Array.isArray(guide?.steps) && guide.steps.length > 0
+    ? guide.steps.map((step, index) => ({
+        step_number: step.step_number ?? index + 1,
+        title: step.title || "",
+        description: step.description || "",
+      }))
+    : [{ step_number: 1, title: "", description: "" }],
+  required_parts: Array.isArray(guide?.required_parts)
+    ? guide.required_parts.map((part) => ({
+        part_id: part.part_id ? String(part.part_id) : "",
+        quantity_needed: Number(part.quantity_needed ?? 1),
+        is_critical: Boolean(part.is_critical),
+        part_name: part.part_name || "",
+        part_sku: part.part_sku || "",
+      }))
+    : [],
+  keywords: Array.isArray(guide?.keywords) ? guide.keywords : [],
+});
+
+export default function RepairGuideForm({ guide, vehicles = [], onSubmit, onCancel }) {
+  const [formData, setFormData] = useState(buildFormData(guide));
   const [availableParts, setAvailableParts] = useState([]);
+  const [availableVehicles, setAvailableVehicles] = useState(vehicles);
 
   useEffect(() => {
     const fetchParts = async () => {
@@ -37,6 +56,22 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
     };
     fetchParts();
   }, []);
+
+  useEffect(() => {
+    if (vehicles.length > 0) {
+      setAvailableVehicles(vehicles);
+      return;
+    }
+    const fetchVehicles = async () => {
+      const data = await Vehicle.list();
+      setAvailableVehicles(Array.isArray(data) ? data : []);
+    };
+    fetchVehicles();
+  }, [vehicles]);
+
+  useEffect(() => {
+    setFormData(buildFormData(guide));
+  }, [guide]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -65,6 +100,11 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
   const handlePartChange = (index, field, value) => {
     const newParts = [...formData.required_parts];
     newParts[index][field] = value;
+    if (field === 'part_id') {
+      const selected = availableParts.find((part) => String(part.id) === String(value));
+      newParts[index].part_name = selected?.name ?? "";
+      newParts[index].part_sku = selected?.sku ?? "";
+    }
     setFormData(prev => ({ ...prev, required_parts: newParts }));
   };
 
@@ -86,9 +126,29 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
         toast.error("Por favor, complete los campos obligatorios: Nombre, Categoría y Descripción.");
         return;
     }
+    if (!formData.vehicle_id) {
+        toast.error("Seleccione el vehículo para esta guía.");
+        return;
+    }
     // Auto-generate keywords from name
     const keywords = formData.name.toLowerCase().split(" ").filter(word => word.length > 2);
-    onSubmit({ ...formData, keywords });
+    const requiredParts = formData.required_parts
+      .filter((part) => part.part_id)
+      .map((part) => {
+        const partId = Number(part.part_id);
+        return {
+          ...part,
+          part_id: Number.isFinite(partId) ? partId : part.part_id,
+          quantity_needed: Number(part.quantity_needed) || 1,
+          is_critical: Boolean(part.is_critical),
+        };
+      });
+    onSubmit({
+      ...formData,
+      vehicle_id: Number(formData.vehicle_id),
+      required_parts: requiredParts,
+      keywords,
+    });
   };
 
   return (
@@ -111,6 +171,23 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
               <div>
                 <Label htmlFor="description">Descripción Corta *</Label>
                 <Input id="description" value={formData.description} onChange={e => handleChange('description', e.target.value)} placeholder="Procedimiento para reemplazar las pastillas de freno." required />
+              </div>
+            </div>
+
+            {/* Vehículo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="vehicle_id">Vehículo *</Label>
+                <Select value={formData.vehicle_id} onValueChange={(v) => handleChange('vehicle_id', v)}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar vehículo..." /></SelectTrigger>
+                  <SelectContent>
+                    {availableVehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={String(vehicle.id)}>
+                        {vehicle.plate} - {vehicle.brand} {vehicle.model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -175,9 +252,18 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
               {formData.required_parts.map((part, index) => (
                 <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded">
                   <div className="flex-1">
-                    <Select value={part.part_id} onValueChange={v => handlePartChange(index, 'part_id', v)}>
+                    <Select
+                      value={part.part_id ? String(part.part_id) : ""}
+                      onValueChange={(v) => handlePartChange(index, 'part_id', v)}
+                    >
                       <SelectTrigger><SelectValue placeholder="Seleccionar repuesto..." /></SelectTrigger>
-                      <SelectContent>{availableParts.map(p => <SelectItem key={p.id} value={p.id}>{p.name} ({p.sku})</SelectItem>)}</SelectContent>
+                      <SelectContent>
+                        {availableParts.map((p) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name} ({p.sku})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <Input type="number" min="1" placeholder="Cant." className="w-24" value={part.quantity_needed} onChange={e => handlePartChange(index, 'quantity_needed', parseInt(e.target.value))} />
@@ -189,7 +275,9 @@ export default function RepairGuideForm({ onSubmit, onCancel }) {
 
             <div className="flex justify-end gap-3 pt-6">
               <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Crear Guía</Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                {guide ? "Actualizar Guía" : "Crear Guía"}
+              </Button>
             </div>
           </form>
         </CardContent>

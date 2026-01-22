@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -238,7 +238,26 @@ const buildTaskLabel = (task) => {
   return category ? `${category}: ${description}` : description;
 };
 
-export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCancel, existingOrders }) {
+const normalizePartsUsed = (partsUsed) => {
+  if (!Array.isArray(partsUsed)) return [];
+  return partsUsed
+    .map((part) => {
+      if (!part) return null;
+      const quantity = Number(part.quantity ?? part.qty ?? part.quantity_needed ?? 0);
+      if (!Number.isFinite(quantity) || quantity <= 0) return null;
+      return {
+        part_id: part.part_id ?? part.id ?? null,
+        name: part.name ?? part.part_name ?? null,
+        sku: part.sku ?? part.part_sku ?? null,
+        category: part.category ?? null,
+        unit_cost: Number(part.unit_cost ?? part.cost ?? 0) || 0,
+        quantity,
+      };
+    })
+    .filter(Boolean);
+};
+
+export default function MaintenanceOrderForm({ order, vehicles, spareParts = [], onSubmit, onCancel, existingOrders }) {
   const [type, setType] = useState(order?.type || "correctivo");
   const initialTasks = Array.isArray(order?.tasks) && order.tasks.length > 0
     ? order.tasks.map(normalizeTask).filter(Boolean)
@@ -262,6 +281,49 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
   const [selectedFaultCategory, setSelectedFaultCategory] = useState(order?.fault_category || "");
   const [isServiceOpen, setIsServiceOpen] = useState(false);
   const [customTask, setCustomTask] = useState("");
+  const [partCategoryFilter, setPartCategoryFilter] = useState("all");
+  const [selectedPartId, setSelectedPartId] = useState("");
+  const [selectedPartQuantity, setSelectedPartQuantity] = useState(1);
+  const [selectedParts, setSelectedParts] = useState(() => {
+    const rawParts = order?.parts ?? order?.metadata?.parts_used ?? [];
+    return normalizePartsUsed(rawParts);
+  });
+
+  useEffect(() => {
+    const rawParts = order?.parts ?? order?.metadata?.parts_used ?? [];
+    setSelectedParts(normalizePartsUsed(rawParts));
+  }, [order?.id]);
+
+  const sparePartCategories = useMemo(() => {
+    const categories = new Map();
+    spareParts.forEach((part) => {
+      if (!part?.category) return;
+      const raw = String(part.category).trim();
+      if (!raw) return;
+      categories.set(raw.toLowerCase(), raw);
+    });
+    return Array.from(categories.values()).sort((a, b) => a.localeCompare(b));
+  }, [spareParts]);
+
+  const filteredSpareParts = useMemo(() => {
+    if (partCategoryFilter === "all") return spareParts;
+    const normalized = String(partCategoryFilter).toLowerCase().trim();
+    return spareParts.filter((part) => String(part?.category || "").toLowerCase() === normalized);
+  }, [partCategoryFilter, spareParts]);
+
+  useEffect(() => {
+    if (partCategoryFilter !== "all") return;
+    const tasks = Array.isArray(formData.tasks) ? formData.tasks : [];
+    const hasFilterKeyword = tasks.some((task) =>
+      String(task?.description || "").toLowerCase().includes("filtro")
+    );
+    const hasFilterCategory = sparePartCategories.some(
+      (category) => category.toLowerCase() === "filtros"
+    );
+    if (hasFilterKeyword && hasFilterCategory) {
+      setPartCategoryFilter("filtros");
+    }
+  }, [formData.tasks, partCategoryFilter, sparePartCategories]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -319,6 +381,65 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
     });
   };
 
+  const handleAddSparePart = () => {
+    if (!selectedPartId) {
+      toast.warning("Selecciona un repuesto.");
+      return;
+    }
+    const part = spareParts.find((item) => String(item.id) === String(selectedPartId));
+    if (!part) {
+      toast.error("No se pudo encontrar el repuesto seleccionado.");
+      return;
+    }
+    const quantity = Number(selectedPartQuantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      toast.warning("Ingresa una cantidad valida.");
+      return;
+    }
+    setSelectedParts((prev) => {
+      const existingIndex = prev.findIndex((item) => String(item.part_id) === String(part.id));
+      if (existingIndex >= 0) {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          quantity: next[existingIndex].quantity + quantity,
+          name: part.name ?? next[existingIndex].name,
+          sku: part.sku ?? next[existingIndex].sku,
+          category: part.category ?? next[existingIndex].category,
+          unit_cost: Number(part.unit_cost ?? next[existingIndex].unit_cost ?? 0) || 0,
+        };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          part_id: part.id,
+          name: part.name,
+          sku: part.sku,
+          category: part.category,
+          unit_cost: Number(part.unit_cost ?? 0) || 0,
+          quantity,
+        },
+      ];
+    });
+    setSelectedPartId("");
+    setSelectedPartQuantity(1);
+  };
+
+  const handleSelectedPartQuantityChange = (partId, quantity) => {
+    setSelectedParts((prev) =>
+      prev.map((part) =>
+        String(part.part_id) === String(partId)
+          ? { ...part, quantity: Math.max(1, Number(quantity) || 1) }
+          : part
+      )
+    );
+  };
+
+  const handleRemoveSelectedPart = (partId) => {
+    setSelectedParts((prev) => prev.filter((part) => String(part.part_id) !== String(partId)));
+  };
+
   const buildTaskKey = (orderTasks, description) => {
     if (Array.isArray(orderTasks) && orderTasks.length > 0) {
       return orderTasks
@@ -351,7 +472,12 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
       });
       return false;
     }
-    
+
+    if (!order?.id && selectedParts.length === 0) {
+      toast.warning("Selecciona al menos un repuesto.");
+      return false;
+    }
+
     if (!formData.vehicle_id || !formData.tasks || formData.tasks.length === 0) {
       toast.warning("Campos requeridos", {
         description: "Por favor, selecciona un vehículo y agrega al menos un trabajo."
@@ -369,12 +495,24 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
         .map(normalizeTask)
         .filter((task) => task && task.description);
       const taskSummary = buildTaskSummary(normalizedTasks);
+      const partsUsed = selectedParts.map((part) => {
+        const inventoryPart = spareParts.find((item) => String(item.id) === String(part.part_id));
+        return {
+          part_id: part.part_id ?? inventoryPart?.id ?? null,
+          name: part.name ?? inventoryPart?.name ?? "Repuesto",
+          sku: part.sku ?? inventoryPart?.sku ?? null,
+          category: part.category ?? inventoryPart?.category ?? null,
+          quantity: Number(part.quantity) || 1,
+          unit_cost: Number(part.unit_cost ?? inventoryPart?.unit_cost ?? 0) || 0,
+        };
+      });
       const finalData = {
         ...formData,
         description: taskSummary,
         vehicle_id: Number(formData.vehicle_id),
         completion_mileage: formData.completion_mileage === "" ? null : Number(formData.completion_mileage),
         tasks: normalizedTasks,
+        parts: partsUsed,
       };
       onSubmit(finalData);
     }
@@ -393,17 +531,17 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
           </Button>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Tipo de Mantenimiento */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Tipo de Mantenimiento *</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-3">
                 <Button type="button" variant={type === 'preventivo' ? 'default' : 'outline'} onClick={() => handleTypeChange('preventivo')}>Preventivo</Button>
                 <Button type="button" variant={type === 'correctivo' ? 'default' : 'outline'} onClick={() => handleTypeChange('correctivo')}>Correctivo</Button>
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="vehicle_id">Vehículo *</Label>
                 <Select value={formData.vehicle_id} onValueChange={(value) => handleChange('vehicle_id', value)}>
@@ -432,10 +570,10 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
             </div>
 
             {/* Sistema de Categorías y Fallas */}
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <Label>Sistema/Componente Afectado *</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                   {Object.keys(faultServiceMapping[formData.type] || {}).map(category => (
                     <Button
                       key={category}
@@ -451,21 +589,21 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
               </div>
 
               {selectedFaultCategory && (
-                <Collapsible open={isServiceOpen} onOpenChange={setIsServiceOpen}>
+                <Collapsible open={isServiceOpen} onOpenChange={setIsServiceOpen} className="pt-2">
                   <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium">
                     {isServiceOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     Seleccionar trabajos específicos
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2">
-                    <div className="max-h-60 overflow-y-auto">
-                      <div className="grid grid-cols-1 gap-2 p-3 bg-gray-50 rounded-lg">
+                  <CollapsibleContent className="mt-3">
+                    <div className="max-h-72 overflow-y-auto">
+                      <div className="grid grid-cols-1 gap-3 p-4 bg-gray-50 rounded-lg">
                         {faultServiceMapping[formData.type][selectedFaultCategory].faults.map(fault => (
                           <Button
                             key={fault}
                             type="button"
                             variant={isTaskSelected(selectedFaultCategory, fault) ? 'default' : 'outline'}
                             onClick={() => toggleTask(selectedFaultCategory, fault)}
-                            className="text-left justify-start text-sm h-auto py-2 px-3"
+                            className="text-left justify-start text-sm h-auto py-3 px-3"
                           >
                             {fault}
                           </Button>
@@ -477,17 +615,17 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
               )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>Trabajos seleccionados *</Label>
                 <span className="text-xs text-gray-500">{formData.tasks?.length || 0} seleccionados</span>
               </div>
               {formData.tasks?.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {formData.tasks.map((task, index) => (
                     <div
                       key={`${task.category || 'general'}-${task.description}-${index}`}
-                      className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm"
                     >
                       <span className="text-gray-700">{buildTaskLabel(task)}</span>
                       <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveTask(index)}>
@@ -499,7 +637,7 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
               ) : (
                 <p className="text-sm text-gray-500">Selecciona uno o más trabajos para crear la orden.</p>
               )}
-              <div className="flex flex-col gap-2 md:flex-row">
+              <div className="flex flex-col gap-3 md:flex-row">
                 <Input
                   value={customTask}
                   onChange={(e) => setCustomTask(e.target.value)}
@@ -511,7 +649,113 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <Label>Repuestos a utilizar *</Label>
+                <span className="text-xs text-gray-500">{selectedParts.length} seleccionados</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Categoría de repuesto</Label>
+                  <Select
+                    value={partCategoryFilter}
+                    onValueChange={(value) => {
+                      setPartCategoryFilter(value);
+                      setSelectedPartId("");
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {sparePartCategories.map((category) => (
+                        <SelectItem key={category} value={category.toLowerCase()}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Repuesto</Label>
+                  <Select value={selectedPartId} onValueChange={setSelectedPartId}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar repuesto" /></SelectTrigger>
+                    <SelectContent>
+                      {filteredSpareParts.map((part) => (
+                        <SelectItem key={part.id} value={String(part.id)}>
+                          {part.name} {Number.isFinite(part.current_stock) ? `(${part.current_stock})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Cantidad</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={selectedPartQuantity}
+                    onChange={(e) => setSelectedPartQuantity(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button type="button" variant="outline" onClick={handleAddSparePart}>
+                  Agregar repuesto
+                </Button>
+              </div>
+
+              {selectedParts.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedParts.map((part) => {
+                    const inventoryPart = spareParts.find((item) => String(item.id) === String(part.part_id));
+                    const label = part.name || inventoryPart?.name || `Repuesto ${part.part_id}`;
+                    const sku = part.sku || inventoryPart?.sku;
+                    return (
+                      <div
+                        key={part.part_id ?? `${label}-${sku ?? "part"}`}
+                        className="rounded-lg border border-gray-200 bg-white p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{label}</p>
+                            <p className="text-xs text-gray-500">
+                              {sku ? `SKU: ${sku}` : "SKU no registrado"}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveSelectedPart(part.part_id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                          <span>Cantidad</span>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={part.quantity}
+                            onChange={(e) => handleSelectedPartQuantityChange(part.part_id, e.target.value)}
+                            className="h-8 w-24"
+                          />
+                          {Number.isFinite(inventoryPart?.current_stock) && (
+                            <span>Stock: {inventoryPart.current_stock}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Selecciona repuestos segun el error o componente que estas corrigiendo.
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="order_number">Número de Orden</Label>
                 <Input id="order_number" value={formData.order_number} disabled />
@@ -531,7 +775,7 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
             </div>
 
             {formData.status === 'completada' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="completion_date">Fecha de cierre</Label>
                   <Input
@@ -557,7 +801,7 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="mechanic">Mecánico Asignado</Label>
                 <Input id="mechanic" value={formData.mechanic} onChange={(e) => handleChange('mechanic', e.target.value)} placeholder="Nombre del mecánico" />
@@ -573,7 +817,7 @@ export default function MaintenanceOrderForm({ order, vehicles, onSubmit, onCanc
               <Textarea id="notes" value={formData.notes} onChange={(e) => handleChange('notes', e.target.value)} placeholder="Detalles adicionales, síntomas observados, condiciones especiales..." />
             </div>
 
-            <div className="flex justify-end gap-3 pt-6">
+            <div className="flex justify-end gap-4 pt-6">
               <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
               <Button type="submit" className="bg-blue-600 hover:bg-blue-700">{order ? 'Actualizar' : 'Crear'} Orden</Button>
             </div>

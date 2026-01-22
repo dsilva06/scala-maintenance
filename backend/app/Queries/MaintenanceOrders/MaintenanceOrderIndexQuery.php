@@ -16,7 +16,7 @@ class MaintenanceOrderIndexQuery
 
     public function handle(Request $request, User $user): Builder
     {
-        $query = CompanyScope::apply(MaintenanceOrder::query()->with('vehicle'), $user);
+        $query = CompanyScope::apply(MaintenanceOrder::query()->with(['vehicle', 'partsUsed']), $user);
 
         if ($vehicleId = $request->query('vehicle_id')) {
             $query->where('vehicle_id', $vehicleId);

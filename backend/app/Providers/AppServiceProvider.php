@@ -7,8 +7,9 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use App\Services\AiAgent\AiActionService;
-use App\Services\AiAgent\AiMemoryService;
+// AI agent services are disabled for this release; keep for later integration.
+// use App\Services\AiAgent\AiActionService;
+// use App\Services\AiAgent\AiMemoryService;
 use App\Services\Mcp\McpContextBuilder;
 use App\Services\Mcp\McpRegistry;
 use App\Services\Mcp\McpServer;
@@ -37,12 +38,13 @@ class AppServiceProvider extends ServiceProvider
             return new McpToolFormatter();
         });
 
-        $this->app->singleton(AiActionService::class, function ($app) {
-            return new AiActionService(
-                $app->make(McpRegistry::class),
-                $app->make(AiMemoryService::class)
-            );
-        });
+        // AI agent services disabled for this release.
+        // $this->app->singleton(AiActionService::class, function ($app) {
+        //     return new AiActionService(
+        //         $app->make(McpRegistry::class),
+        //         $app->make(AiMemoryService::class)
+        //     );
+        // });
     }
 
     /**

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->string('description');
+            $table->text('description');
             $table->string('category')->nullable();
             $table->string('type')->default('correctivo');
             $table->string('priority')->default('media');

@@ -12,6 +12,10 @@ class AlertResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return $this->resource->toArray();
+        $payload = $this->resource->toArray();
+        $payload['related_entity_id'] = $payload['related_id'] ?? null;
+        $payload['related_entity_type'] = $payload['related_type'] ?? null;
+
+        return $payload;
     }
 }
