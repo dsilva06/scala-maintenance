@@ -15,7 +15,8 @@ class VehicleIndexQuery
 
     public function handle(Request $request, User $user): Builder
     {
-        $query = CompanyScope::apply(Vehicle::query(), $user);
+        $query = CompanyScope::apply(Vehicle::query(), $user)
+            ->with('tirePositions');
 
         $this->applyQueryOptions($request, $query, [
             'created_at',

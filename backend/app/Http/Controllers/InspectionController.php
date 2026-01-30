@@ -32,14 +32,16 @@ class InspectionController extends Controller
         $this->authorizeCompanyWrite($request);
         $inspection = $createInspection->handle($request->user(), $request->validated());
 
-        return InspectionResource::make($inspection->load('vehicle'))->response()->setStatusCode(201);
+        return InspectionResource::make($inspection->load(['vehicle', 'tireInspections.tire.type', 'tireInspections.position']))
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function show(Request $request, Inspection $inspection)
     {
         $this->authorizeCompanyRead($request, $inspection);
 
-        return InspectionResource::make($inspection->load('vehicle'));
+        return InspectionResource::make($inspection->load(['vehicle', 'tireInspections.tire.type', 'tireInspections.position']));
     }
 
     public function update(InspectionUpdateRequest $request, Inspection $inspection, UpdateInspection $updateInspection)
@@ -49,7 +51,7 @@ class InspectionController extends Controller
 
         $inspection = $updateInspection->handle($request->user(), $inspection, $request->validated());
 
-        return InspectionResource::make($inspection->load('vehicle'));
+        return InspectionResource::make($inspection->load(['vehicle', 'tireInspections.tire.type', 'tireInspections.position']));
     }
 
     public function destroy(Request $request, Inspection $inspection, DeleteInspection $deleteInspection)

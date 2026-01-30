@@ -15,7 +15,8 @@ class SparePartIndexQuery
 
     public function handle(Request $request, User $user): Builder
     {
-        $query = CompanyScope::apply(SparePart::query(), $user);
+        $query = CompanyScope::apply(SparePart::query(), $user)
+            ->with('lifeStat');
 
         if ($category = $request->query('category')) {
             $query->where('category', $category);

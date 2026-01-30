@@ -12,6 +12,16 @@ class VehicleResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return $this->resource->toArray();
+        $data = $this->resource->toArray();
+
+        if ($this->resource->relationLoaded('tirePositions')) {
+            $data['tire_positions'] = $this->resource->tirePositions;
+        }
+
+        if ($this->resource->relationLoaded('activeTireAssignments')) {
+            $data['active_tire_assignments'] = $this->resource->activeTireAssignments;
+        }
+
+        return $data;
     }
 }

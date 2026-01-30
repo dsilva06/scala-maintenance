@@ -55,4 +55,9 @@ class PurchaseOrder extends Model
     {
         return $this->belongsTo(SparePart::class);
     }
+
+    public function items()
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
 }

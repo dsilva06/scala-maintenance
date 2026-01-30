@@ -34,6 +34,7 @@ class CreateMaintenanceOrder
         $this->sideEffects->refreshInspectionStatus($order);
         $this->sideEffects->syncPartsUsed($order, $partsPayload);
         $this->sideEffects->applySparePartUsage($order);
+        $this->sideEffects->recordSparePartLifeEvents($order);
 
         $this->auditLogger->record(
             $user,

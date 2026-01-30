@@ -30,7 +30,16 @@ class SparePartController extends Controller
     public function store(SparePartStoreRequest $request, CreateSparePart $createSparePart)
     {
         $this->authorizeCompanyWrite($request);
-        $part = $createSparePart->handle($request->user(), $request->validated());
+        $validated = $request->validated();
+        $part = $createSparePart->handle($request->user(), $validated);
+
+        $supplierIds = $validated['supplier_ids'] ?? null;
+        if (is_array($supplierIds) && !empty($supplierIds)) {
+            $part->suppliers()->syncWithPivotValues($supplierIds, [
+                'company_id' => $request->user()->company_id,
+            ]);
+            $part->load('suppliers');
+        }
 
         return SparePartResource::make($part)->response()->setStatusCode(201);
     }
@@ -39,7 +48,7 @@ class SparePartController extends Controller
     {
         $this->authorizeCompanyRead($request, $sparePart);
 
-        return SparePartResource::make($sparePart);
+        return SparePartResource::make($sparePart->load('lifeStat'));
     }
 
     public function update(SparePartUpdateRequest $request, SparePart $sparePart, UpdateSparePart $updateSparePart)
@@ -47,7 +56,16 @@ class SparePartController extends Controller
         $this->authorizeCompanyRead($request, $sparePart);
         $this->authorizeCompanyWrite($request);
 
-        $sparePart = $updateSparePart->handle($request->user(), $sparePart, $request->validated());
+        $validated = $request->validated();
+        $sparePart = $updateSparePart->handle($request->user(), $sparePart, $validated);
+
+        if (array_key_exists('supplier_ids', $validated)) {
+            $supplierIds = $validated['supplier_ids'] ?? [];
+            $sparePart->suppliers()->syncWithPivotValues($supplierIds, [
+                'company_id' => $request->user()->company_id,
+            ]);
+            $sparePart->load('suppliers');
+        }
 
         return SparePartResource::make($sparePart);
     }

@@ -10,6 +10,7 @@ class UpdateVehicle
 {
     public function __construct(
         private NormalizeVehiclePayload $normalizer,
+        private SyncVehicleTirePositions $tirePositions,
         private AuditLogger $auditLogger
     )
     {
@@ -19,8 +20,12 @@ class UpdateVehicle
     {
         $before = $this->auditLogger->snapshot($vehicle);
         $payload = $this->normalizer->handle($data);
+        $positions = $payload['tire_positions'] ?? null;
+        $resetPositions = (bool) ($payload['tire_positions_reset'] ?? false);
         unset($payload['company_id'], $payload['user_id']);
+        unset($payload['tire_positions'], $payload['tire_positions_reset']);
         $vehicle->update($payload);
+        $this->tirePositions->handle($vehicle, $positions, $resetPositions);
 
         $this->auditLogger->record(
             $user,

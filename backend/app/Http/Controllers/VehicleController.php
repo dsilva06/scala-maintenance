@@ -41,7 +41,7 @@ class VehicleController extends Controller
 
         $vehicle = $createVehicle->handle($request->user(), $validated);
 
-        return VehicleResource::make($vehicle)->response()->setStatusCode(201);
+        return VehicleResource::make($vehicle->load('tirePositions'))->response()->setStatusCode(201);
     }
 
     /**
@@ -50,6 +50,11 @@ class VehicleController extends Controller
     public function show(Request $request, Vehicle $vehicle)
     {
         $this->authorizeCompanyRead($request, $vehicle);
+
+        $vehicle->load([
+            'tirePositions',
+            'activeTireAssignments.tire.type',
+        ]);
 
         return VehicleResource::make($vehicle);
     }
@@ -66,7 +71,7 @@ class VehicleController extends Controller
 
         $vehicle = $updateVehicle->handle($request->user(), $vehicle, $validated);
 
-        return VehicleResource::make($vehicle);
+        return VehicleResource::make($vehicle->load('tirePositions'));
     }
 
     /**

@@ -29,7 +29,7 @@ class NormalizeSparePartPayload
             $attributes['photo_url'] = trim($attributes['photo_url']);
         }
 
-        foreach (['unit_cost'] as $numeric) {
+        foreach (['unit_cost', 'expected_life_km'] as $numeric) {
             if (array_key_exists($numeric, $attributes) && $attributes[$numeric] === '') {
                 $attributes[$numeric] = null;
             }

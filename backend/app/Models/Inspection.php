@@ -46,4 +46,9 @@ class Inspection extends Model
     {
         return $this->belongsTo(Vehicle::class);
     }
+
+    public function tireInspections()
+    {
+        return $this->hasMany(TireInspection::class);
+    }
 }

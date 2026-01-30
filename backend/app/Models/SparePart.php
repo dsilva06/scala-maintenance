@@ -22,6 +22,7 @@ class SparePart extends Model
         'current_stock',
         'minimum_stock',
         'maximum_stock',
+        'expected_life_km',
         'unit_cost',
         'supplier',
         'storage_location',
@@ -33,6 +34,7 @@ class SparePart extends Model
         'current_stock' => 'integer',
         'minimum_stock' => 'integer',
         'maximum_stock' => 'integer',
+        'expected_life_km' => 'integer',
         'unit_cost' => 'decimal:2',
         'metadata' => 'array',
     ];
@@ -45,5 +47,23 @@ class SparePart extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function lifeEvents()
+    {
+        return $this->hasMany(SparePartLifeEvent::class);
+    }
+
+    public function lifeStat()
+    {
+        return $this->hasOne(SparePartLifeStat::class);
+    }
+
+    public function suppliers()
+    {
+        return $this->belongsToMany(Supplier::class)
+            ->withPivot('company_id')
+            ->withTimestamps()
+            ->when($this->company_id, fn ($query) => $query->wherePivot('company_id', $this->company_id));
     }
 }

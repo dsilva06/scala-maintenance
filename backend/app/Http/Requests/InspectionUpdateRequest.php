@@ -40,6 +40,28 @@ class InspectionUpdateRequest extends FormRequest
             'checklist_items.*.evidence.*.ai_suggestion' => ['nullable', 'string'],
             'checklist_items.*.evidence.*.ai_status' => ['nullable', 'string', 'max:50'],
             'attachments' => ['sometimes', 'nullable', 'array'],
+            'tire_checks' => ['sometimes', 'nullable', 'array'],
+            'tire_checks.*.tire_position_id' => [
+                'required_with:tire_checks',
+                'integer',
+                $this->existsForUserCompany('tire_positions', 'id'),
+            ],
+            'tire_checks.*.tire_id' => [
+                'nullable',
+                'integer',
+                $this->existsForUserCompany('tires', 'id'),
+            ],
+            'tire_checks.*.tire_serial' => ['nullable', 'string', 'max:120'],
+            'tire_checks.*.tire_type_id' => [
+                'nullable',
+                'integer',
+                $this->existsForUserCompany('tire_types', 'id'),
+            ],
+            'tire_checks.*.min_depth_mm' => ['nullable', 'numeric', 'min:0'],
+            'tire_checks.*.depth_new_mm' => ['nullable', 'numeric', 'min:0'],
+            'tire_checks.*.pressure_psi' => ['nullable', 'numeric', 'min:0'],
+            'tire_checks.*.depth_mm' => ['nullable', 'numeric', 'min:0'],
+            'tire_checks.*.notes' => ['nullable', 'string'],
             'metadata' => ['sometimes', 'nullable', 'array'],
         ];
     }

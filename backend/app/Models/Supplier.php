@@ -39,4 +39,12 @@ class Supplier extends Model
     {
         return $this->hasMany(PurchaseOrder::class);
     }
+
+    public function spareParts()
+    {
+        return $this->belongsToMany(SparePart::class)
+            ->withPivot('company_id')
+            ->withTimestamps()
+            ->when($this->company_id, fn ($query) => $query->wherePivot('company_id', $this->company_id));
+    }
 }

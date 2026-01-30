@@ -16,7 +16,8 @@ class PurchaseOrderIndexQuery
 
     public function handle(Request $request, User $user): Builder
     {
-        $query = CompanyScope::apply(PurchaseOrder::query(), $user);
+        $query = CompanyScope::apply(PurchaseOrder::query(), $user)
+            ->with('items');
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);

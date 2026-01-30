@@ -20,11 +20,37 @@ class UpdatePurchaseOrder
         $previousStatus = $order->status;
         $before = $this->auditLogger->snapshot($order);
         $payload = $this->normalizer->handle($data);
+        $itemsProvided = array_key_exists('items', $payload);
+        $items = $itemsProvided ? $payload['items'] : null;
         unset($payload['company_id'], $payload['user_id']);
+        unset($payload['items']);
         $payload = $this->sideEffects->applySupplierName($payload, $user->company_id);
 
+        if ($itemsProvided) {
+            $items = is_array($items) ? $this->sideEffects->normalizeItemsPayload($items) : [];
+            $payload = $this->sideEffects->hydrateTotalsFromItems($payload, $items);
+        } elseif (!$order->items()->exists()) {
+            $hasLegacyFields = array_intersect_key($payload, array_flip([
+                'product_name',
+                'spare_part_id',
+                'items_count',
+                'total_cost',
+            ]));
+
+            if ($hasLegacyFields) {
+                $items = $this->sideEffects->buildLegacyItemsPayload($payload);
+                $payload = $this->sideEffects->hydrateTotalsFromItems($payload, $items);
+            } else {
+                $items = null;
+            }
+        } else {
+            $items = null;
+        }
+
         $order->update($payload);
+        $this->sideEffects->syncItems($order, $items);
         $this->sideEffects->applyInventoryReceipt($order, $previousStatus);
+        $this->sideEffects->linkSupplierToSparePart($order);
 
         $this->auditLogger->record(
             $user,
@@ -34,6 +60,6 @@ class UpdatePurchaseOrder
             $this->auditLogger->snapshot($order->refresh())
         );
 
-        return $order;
+        return $order->load('items');
     }
 }

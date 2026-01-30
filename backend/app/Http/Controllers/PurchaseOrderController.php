@@ -39,6 +39,8 @@ class PurchaseOrderController extends Controller
     {
         $this->authorizeCompanyRead($request, $purchaseOrder);
 
+        $purchaseOrder->load('items');
+
         return PurchaseOrderResource::make($purchaseOrder);
     }
 

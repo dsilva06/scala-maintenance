@@ -12,6 +12,12 @@ class InspectionResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return $this->resource->toArray();
+        $data = $this->resource->toArray();
+
+        if ($this->resource->relationLoaded('tireInspections')) {
+            $data['tire_inspections'] = $this->resource->tireInspections;
+        }
+
+        return $data;
     }
 }

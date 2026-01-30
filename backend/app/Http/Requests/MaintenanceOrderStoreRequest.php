@@ -44,4 +44,16 @@ class MaintenanceOrderStoreRequest extends FormRequest
             'metadata' => ['nullable', 'array'],
         ];
     }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $status = $this->input('status');
+            $completionMileage = $this->input('completion_mileage');
+
+            if ($status === 'completada' && ($completionMileage === null || $completionMileage === '')) {
+                $validator->errors()->add('completion_mileage', 'El kilometraje es obligatorio al completar la orden.');
+            }
+        });
+    }
 }

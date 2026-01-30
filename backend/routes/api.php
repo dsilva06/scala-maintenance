@@ -19,8 +19,13 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\RepairGuideController;
 use App\Http\Controllers\SparePartController;
 use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\TelemetryController;
-use App\Http\Controllers\TripController;
+use App\Http\Controllers\TireAssignmentController;
+use App\Http\Controllers\TireController;
+use App\Http\Controllers\TireTypeController;
+// Trip telemetry disabled for this release.
+// use App\Http\Controllers\TelemetryController;
+// Trip module disabled for this release.
+// use App\Http\Controllers\TripController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -69,11 +74,14 @@ $registerAppRoutes = function () {
     Route::apiResource('inspections', InspectionController::class);
     Route::apiResource('purchase-orders', PurchaseOrderController::class);
     Route::apiResource('suppliers', SupplierController::class);
-    Route::apiResource('trips', TripController::class);
-    Route::prefix('telemetry')->middleware('throttle:telemetry')->group(function () {
-        Route::post('ingest', [TelemetryController::class, 'ingest']);
-        Route::get('stream', [TelemetryController::class, 'stream']);
-    });
+    Route::apiResource('tire-types', TireTypeController::class);
+    Route::apiResource('tires', TireController::class);
+    Route::apiResource('tire-assignments', TireAssignmentController::class)->only(['index', 'store']);
+    // Route::apiResource('trips', TripController::class);
+    // Route::prefix('telemetry')->middleware('throttle:telemetry')->group(function () {
+    //     Route::post('ingest', [TelemetryController::class, 'ingest']);
+    //     Route::get('stream', [TelemetryController::class, 'stream']);
+    // });
     Route::prefix('analytics')->middleware('throttle:analytics')->group(function () {
         Route::post('events', [AnalyticsEventController::class, 'store']);
         Route::get('events/summary', [AnalyticsEventController::class, 'summary']);

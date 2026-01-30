@@ -38,6 +38,13 @@ class VehicleUpdateRequest extends FormRequest
             'next_service_date' => ['nullable', 'date'],
             'assigned_driver' => ['nullable', 'string', 'max:120'],
             'metadata' => ['nullable', 'array'],
+            'tire_positions' => ['sometimes', 'nullable', 'array'],
+            'tire_positions.*.axle_index' => ['required_with:tire_positions', 'integer', 'min:1'],
+            'tire_positions.*.position_code' => ['required_with:tire_positions', 'string', 'max:50'],
+            'tire_positions.*.label' => ['nullable', 'string', 'max:120'],
+            'tire_positions.*.position_role' => ['nullable', 'string', 'in:directional,traction'],
+            'tire_positions.*.is_spare' => ['nullable', 'boolean'],
+            'tire_positions_reset' => ['sometimes', 'boolean'],
         ];
     }
 }

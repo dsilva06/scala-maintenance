@@ -57,6 +57,21 @@ class Vehicle extends Model
         return $this->hasMany(Inspection::class);
     }
 
+    public function tirePositions()
+    {
+        return $this->hasMany(TirePosition::class);
+    }
+
+    public function tireAssignments()
+    {
+        return $this->hasMany(TireAssignment::class);
+    }
+
+    public function activeTireAssignments()
+    {
+        return $this->tireAssignments()->whereNull('dismounted_at');
+    }
+
     public function documents()
     {
         return $this->hasMany(Document::class);

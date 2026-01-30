@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use App\Jobs\GenerateReportJob;
 use App\Jobs\ImportFleetDataJob;
 use App\Jobs\ProcessAlertJob;
-use App\Jobs\RecomputeTripEtaJob;
+// use App\Jobs\RecomputeTripEtaJob;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -37,10 +37,10 @@ Artisan::command('alerts:process {alertId}', function () {
     $this->info("Alert job queued for alert {$alertId}.");
 })->purpose('Queue an alert processing job');
 
-Artisan::command('trips:recompute-eta {tripId}', function () {
-    $tripId = (int) $this->argument('tripId');
-
-    RecomputeTripEtaJob::dispatch($tripId);
-
-    $this->info("ETA recompute job queued for trip {$tripId}.");
-})->purpose('Queue an ETA recomputation job');
+// Artisan::command('trips:recompute-eta {tripId}', function () {
+//     $tripId = (int) $this->argument('tripId');
+//
+//     RecomputeTripEtaJob::dispatch($tripId);
+//
+//     $this->info("ETA recompute job queued for trip {$tripId}.");
+// })->purpose('Queue an ETA recomputation job');

@@ -40,6 +40,16 @@ class PurchaseOrderStoreRequest extends FormRequest
                 'integer',
                 $this->existsForUserCompany('spare_parts', 'id'),
             ],
+            'items' => ['nullable', 'array'],
+            'items.*.spare_part_id' => [
+                'nullable',
+                'integer',
+                $this->existsForUserCompany('spare_parts', 'id'),
+            ],
+            'items.*.product_name' => ['nullable', 'string', 'max:150'],
+            'items.*.quantity' => ['required_with:items', 'integer', 'min:1'],
+            'items.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'items.*.total_cost' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
         ];

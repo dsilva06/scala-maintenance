@@ -7,10 +7,15 @@ use App\Models\MaintenanceOrder;
 use App\Models\MaintenanceOrderPart;
 use App\Models\SparePart;
 use App\Models\Vehicle;
+use App\Services\SparePartLifeService;
 use Illuminate\Support\Facades\DB;
 
 class MaintenanceOrderSideEffects
 {
+    public function __construct(
+        private SparePartLifeService $lifeService
+    ) {
+    }
     public function ensureVehicleBelongsToUser(?int $vehicleId, int $companyId): void
     {
         if ($vehicleId === null) {
@@ -153,6 +158,11 @@ class MaintenanceOrderSideEffects
             $metadata['parts_inventory_applied_at'] = now()->toIso8601String();
             $order->forceFill(['metadata' => $metadata])->save();
         });
+    }
+
+    public function recordSparePartLifeEvents(MaintenanceOrder $order): void
+    {
+        $this->lifeService->recordOrderEvents($order);
     }
 
     public function syncPartsUsed(MaintenanceOrder $order, ?array $parts): void

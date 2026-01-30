@@ -104,6 +104,16 @@ class User extends Authenticatable
         return $this->hasMany(PurchaseOrder::class);
     }
 
+    public function tireTypes()
+    {
+        return $this->hasMany(TireType::class);
+    }
+
+    public function tires()
+    {
+        return $this->hasMany(Tire::class);
+    }
+
     public function suppliers()
     {
         return $this->hasMany(Supplier::class);
